@@ -400,6 +400,11 @@ a:focus-visible {
   font-weight: 700;
 }
 
+.quiet-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .primary-button {
   display: inline-flex;
   gap: 24px;
@@ -436,6 +441,21 @@ a:focus-visible {
   margin: 13px 0 0;
   color: #a9351f;
   font-size: 11px;
+}
+
+.form-error p {
+  margin: 0;
+}
+
+.form-error a {
+  display: inline-block;
+  min-height: 44px;
+  margin-top: 5px;
+  color: #7a2516;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 44px;
+  text-underline-offset: 2px;
 }
 
 .outcome-card {

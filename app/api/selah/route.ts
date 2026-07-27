@@ -25,6 +25,7 @@ const UPSTREAM_TIMEOUT_MS = 15_000;
 const OVERALL_TIMEOUT_MS = 35_000;
 const RATE_LIMIT_MAX = 6;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1_000;
+const SUPPORT_URL = "https://findahelpline.com/";
 
 let cachedGlooToken:
   | {
@@ -353,11 +354,77 @@ async function fetchYouVersion(
 }
 
 function looksHighRisk(value: string) {
-  return [
-    /\b(?:suicid(?:e|al)|self[- ]?harm|end my life|kill myself)\b/iu,
-    /\b(?:kill|shoot|stab|hurt)\s+(?:you|them|him|her|myself|yourself)\b/iu,
-    /\b(?:abuse|abuser|rape|stalk(?:ed|ing)?|immediate danger)\b/iu,
-  ].some((pattern) => pattern.test(value));
+  const text = value
+    .normalize("NFKC")
+    .replace(/[‘’]/gu, "'")
+    .toLowerCase();
+
+  const passiveIdeation = [
+    /\b(?:i\s+)?(?:do not|don't)\s+want\s+to\s+be\s+(?:here|alive)\s+anymore\b/u,
+    /\b(?:nobody|no one)\s+would\s+miss\s+me\b/u,
+    /\b(?:my family|everyone|you|they)\s+would\s+be\s+better\s+off\s+without\s+me\b/u,
+    /\bi\s+can(?:not|'t)\s+keep\s+living(?:\s+like\s+this)?\b/u,
+    /\bthere(?:'s| is)\s+no\s+(?:reason|point)\s+(?:for\s+me\s+)?to\s+live\b/u,
+    /\bi\s+(?:will not|won't)\s+be\s+around\s+(?:tomorrow|much longer)\b/u,
+    /\bi\s+(?:want|plan|intend)\s+to\s+(?:die|kill myself|end my life)\b/u,
+    /\bi\s+wish\s+i\s+(?:were|was)\s+dead\b/u,
+    /\bi\s+(?:do not|don't)\s+want\s+to\s+wake\s+up\b/u,
+    /\bi(?:'m| am| feel)\s+suicidal\b/u,
+  ].some((pattern) => pattern.test(text));
+
+  const intent =
+    String.raw`(?:i(?:'m| am) going to|i(?:'ll| will)|we(?:'re| are) going to|we(?:'ll| will))`;
+  const benignCommunication = new RegExp(
+    String.raw`\b${intent}\s+shoot\s+you\s+(?:an?\s+)?(?:email|message|text|note|invite|link)\b`,
+    "u",
+  ).test(text);
+  const explicitThreats = !benignCommunication && [
+    new RegExp(
+      String.raw`\b${intent}\s+(?:kill|shoot|stab|hurt|end)\s+(?:you|them|him|her|myself|ourselves)\b`,
+      "u",
+    ),
+    new RegExp(
+      String.raw`\b${intent}\s+burn\s+(?:your|their|his|her)\s+(?:house|home|church)\s+down\b`,
+      "u",
+    ),
+    new RegExp(
+      String.raw`\b${intent}\s+(?:make\s+you\s+pay|come\s+for\s+you)\b`,
+      "u",
+    ),
+    /\b(?:go\s+)?kill\s+yourself\b/u,
+    /\bwatch\s+your\s+back\b/u,
+  ].some((pattern) => pattern.test(text));
+
+  const reportedThreat =
+    /\b(?:he|she|they|someone)\s+said\s+(?:he|she|they)\s+would\s+(?:kill|shoot|stab|hurt)\s+(?:me|us|you|him|her|them)\b/u.test(
+      text,
+    );
+
+  const benignLocationExplanation =
+    /\b(?:i|we)\s+know\s+where\s+you\s+live\s+because\s+you\s+(?:sent|gave|shared)\s+(?:me|us)\s+(?:the|your)\s+address\b/u.test(
+      text,
+    );
+  const locationThreat =
+    !benignLocationExplanation &&
+    /\b(?:i|we)\s+know\s+where\s+you\s+live\b/u.test(text);
+
+  const personalAbuse = [
+    /\bi\s+(?:was|am|have been)\s+(?:abused|stalked)\b/u,
+    /\b(?:my\s+[\p{L}'-]+|he|she|they|someone|somebody)\s+(?:(?:is|was|has been)\s+)?(?:abusing|stalking|abused|stalked)\s+me\b/u,
+    /\byou(?:'re| are| were| have been)?\s*(?:abusing|stalking|abused|stalked)\s+me\b/u,
+    /\b(?:my|your)\s+(?:abuser|stalker)\b/u,
+    /\bi\s+(?:was|am|have been)\s+(?:raped|sexually assaulted)\b/u,
+    /\b(?:you|he|she|they|someone)\s+(?:raped|sexually assaulted)\s+me\b/u,
+    /\bimmediate danger\b/u,
+  ].some((pattern) => pattern.test(text));
+
+  return (
+    passiveIdeation ||
+    explicitThreats ||
+    reportedThreat ||
+    locationThreat ||
+    personalAbuse
+  );
 }
 
 function takeRateLimit(request: Request) {
@@ -436,7 +503,8 @@ export async function POST(request: Request) {
       {
         code: "HIGH_RISK",
         error:
-          "Selah does not open a spiritual reflection for language about threats, self-harm, abuse, or immediate danger. Pause here. If anyone may be in danger, contact local emergency services or a trusted person nearby.",
+          "Selah cannot safely offer a Scripture reflection for language that may signal self-harm, a threat, abuse, or immediate danger. Do not send this draft. If danger is immediate, contact local emergency services. For confidential support, choose a verified helpline for your country.",
+        supportUrl: SUPPORT_URL,
       },
       { status: 422, headers: NO_STORE_HEADERS },
     );

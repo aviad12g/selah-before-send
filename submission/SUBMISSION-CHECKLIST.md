@@ -15,8 +15,8 @@ Jerusalem: **August 1, 2026 at 07:59 IDT**
 - [x] Upstream/overall timeouts, token cache, and live quota guard
 - [x] Real ten-minute browser countdown
 - [x] Accessible focus transfer, context controls, and improved contrast
-- [x] Lint, strict TypeScript, production build, and 4/4 tests passing
-- [x] Executed public notebook with 17 deterministic checks/cases
+- [x] Lint, strict TypeScript, production build, and 5/5 tests passing
+- [x] Executed public notebook with 46 deterministic checks/cases
 - [x] 462-word final writeup
 - [x] Sub-three-minute video script and shot list
 - [x] Exact-text landscape cover in `public/og.png`

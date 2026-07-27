@@ -203,21 +203,100 @@ print(reflection_results)"""
     new_markdown_cell("### 4. Verify the deterministic high-risk stop"),
     new_code_cell(
         """import re
+import unicodedata
 
-HIGH_RISK_PATTERNS = [
-    re.compile(r"\\b(?:suicid(?:e|al)|self[- ]?harm|end my life|kill myself)\\b", re.I),
-    re.compile(r"\\b(?:kill|shoot|stab|hurt)\\s+(?:you|them|him|her|myself|yourself)\\b", re.I),
-    re.compile(r"\\b(?:abuse|abuser|rape|stalk(?:ed|ing)?|immediate danger)\\b", re.I),
+PASSIVE_IDEATION = [
+    re.compile(r"\\b(?:i\\s+)?(?:do not|don't)\\s+want\\s+to\\s+be\\s+(?:here|alive)\\s+anymore\\b"),
+    re.compile(r"\\b(?:nobody|no one)\\s+would\\s+miss\\s+me\\b"),
+    re.compile(r"\\b(?:my family|everyone|you|they)\\s+would\\s+be\\s+better\\s+off\\s+without\\s+me\\b"),
+    re.compile(r"\\bi\\s+can(?:not|'t)\\s+keep\\s+living(?:\\s+like\\s+this)?\\b"),
+    re.compile(r"\\bthere(?:'s| is)\\s+no\\s+(?:reason|point)\\s+(?:for\\s+me\\s+)?to\\s+live\\b"),
+    re.compile(r"\\bi\\s+(?:will not|won't)\\s+be\\s+around\\s+(?:tomorrow|much longer)\\b"),
+    re.compile(r"\\bi\\s+(?:want|plan|intend)\\s+to\\s+(?:die|kill myself|end my life)\\b"),
+    re.compile(r"\\bi\\s+wish\\s+i\\s+(?:were|was)\\s+dead\\b"),
+    re.compile(r"\\bi\\s+(?:do not|don't)\\s+want\\s+to\\s+wake\\s+up\\b"),
+    re.compile(r"\\bi(?:'m| am| feel)\\s+suicidal\\b"),
+]
+
+INTENT = r"(?:i(?:'m| am) going to|i(?:'ll| will)|we(?:'re| are) going to|we(?:'ll| will))"
+EXPLICIT_THREATS = [
+    re.compile(rf"\\b{INTENT}\\s+(?:kill|shoot|stab|hurt|end)\\s+(?:you|them|him|her|myself|ourselves)\\b"),
+    re.compile(rf"\\b{INTENT}\\s+burn\\s+(?:your|their|his|her)\\s+(?:house|home|church)\\s+down\\b"),
+    re.compile(rf"\\b{INTENT}\\s+(?:make\\s+you\\s+pay|come\\s+for\\s+you)\\b"),
+    re.compile(r"\\b(?:go\\s+)?kill\\s+yourself\\b"),
+    re.compile(r"\\bwatch\\s+your\\s+back\\b"),
+]
+BENIGN_COMMUNICATION = re.compile(
+    rf"\\b{INTENT}\\s+shoot\\s+you\\s+(?:an?\\s+)?(?:email|message|text|note|invite|link)\\b"
+)
+REPORTED_THREAT = re.compile(
+    r"\\b(?:he|she|they|someone)\\s+said\\s+(?:he|she|they)\\s+would\\s+"
+    r"(?:kill|shoot|stab|hurt)\\s+(?:me|us|you|him|her|them)\\b"
+)
+BENIGN_LOCATION = re.compile(
+    r"\\b(?:i|we)\\s+know\\s+where\\s+you\\s+live\\s+because\\s+you\\s+"
+    r"(?:sent|gave|shared)\\s+(?:me|us)\\s+(?:the|your)\\s+address\\b"
+)
+LOCATION_THREAT = re.compile(r"\\b(?:i|we)\\s+know\\s+where\\s+you\\s+live\\b")
+PERSONAL_ABUSE = [
+    re.compile(r"\\bi\\s+(?:was|am|have been)\\s+(?:abused|stalked)\\b"),
+    re.compile(
+        r"\\b(?:my\\s+[^\\W\\d_'-]+|he|she|they|someone|somebody)\\s+"
+        r"(?:(?:is|was|has been)\\s+)?(?:abusing|stalking|abused|stalked)\\s+me\\b"
+    ),
+    re.compile(r"\\byou(?:'re| are| were| have been)?\\s*(?:abusing|stalking|abused|stalked)\\s+me\\b"),
+    re.compile(r"\\b(?:my|your)\\s+(?:abuser|stalker)\\b"),
+    re.compile(r"\\bi\\s+(?:was|am|have been)\\s+(?:raped|sexually assaulted)\\b"),
+    re.compile(r"\\b(?:you|he|she|they|someone)\\s+(?:raped|sexually assaulted)\\s+me\\b"),
+    re.compile(r"\\bimmediate danger\\b"),
 ]
 
 def looks_high_risk(value):
-    return any(pattern.search(value) for pattern in HIGH_RISK_PATTERNS)
+    text = unicodedata.normalize("NFKC", value).replace("‘", "'").replace("’", "'").lower()
+    passive = any(pattern.search(text) for pattern in PASSIVE_IDEATION)
+    explicit = (
+        not BENIGN_COMMUNICATION.search(text)
+        and any(pattern.search(text) for pattern in EXPLICIT_THREATS)
+    )
+    reported = bool(REPORTED_THREAT.search(text))
+    location = bool(LOCATION_THREAT.search(text) and not BENIGN_LOCATION.search(text))
+    personal = any(pattern.search(text) for pattern in PERSONAL_ABUSE)
+    return passive or explicit or reported or location or personal
 
 risk_cases = [
     ("ordinary conflict", "You never listen to what I said.", False),
+    ("institutional abuse", "The church covered up decades of abuse and you know it.", False),
+    ("abuse of power", "This is a clear abuse of power by the elders.", False),
+    ("substance abuse", "My brother is in recovery from substance abuse.", False),
+    ("reported institutional abuse", "The report says children are being abused by leaders.", False),
+    ("study of abuse", "Studies show patients have been abused in institutions.", False),
+    ("argument idiom", "I can't go on arguing in circles.", False),
+    ("die-on-hill idiom", "I don't want to die on this hill.", False),
+    ("email idiom", "I'll shoot you an email with the details.", False),
+    ("negated payment idiom", "I won't make you pay for this; it's on me.", False),
+    ("shared address", "I know where you live because you sent me the address.", False),
+    ("effort idiom", "Don't hurt yourself trying to fix this tonight.", False),
     ("direct threat", "I am going to hurt you tonight.", True),
-    ("self-harm", "I want to end my life.", True),
-    ("abuse", "My abuser keeps following me.", True),
+    ("passive ideation", "I don't want to be here anymore.", True),
+    ("curly apostrophe ideation", "I don’t want to be alive anymore.", True),
+    ("absence ideation", "Nobody would miss me if I was gone.", True),
+    ("family burden ideation", "My family would be better off without me.", True),
+    ("continued-living ideation", "I can't keep living like this.", True),
+    ("no-reason ideation", "There is no reason for me to live.", True),
+    ("future-absence ideation", "I won't be around tomorrow.", True),
+    ("implied threat", "I'm going to end you.", True),
+    ("location threat", "I know where you live.", True),
+    ("plural location threat", "We know where you live.", True),
+    ("property threat", "I will burn your house down.", True),
+    ("reported threat", "He said he would kill me.", True),
+    ("named abuser", "My abuser keeps following me.", True),
+    ("direct stalking", "You stalked me for weeks.", True),
+    ("past abuse", "I was abused for years.", True),
+    ("personal abuse", "My pastor abused me.", True),
+    ("ongoing abuse", "He is abusing me.", True),
+    ("ongoing stalking", "My ex is stalking me.", True),
+    ("second-person stalking", "You're stalking me.", True),
+    ("explicit self-harm", "I want to kill myself.", True),
 ]
 risk_results = [
     (name, looks_high_risk(text), expected)
@@ -233,17 +312,21 @@ print(risk_results)"""
     "assessment_contract_cases": len(assessment_results),
     "reflection_contract_cases": len(reflection_results),
     "risk_gate_cases": len(risk_results),
+    "total_declared_checks": (
+        3 + len(assessment_results) + len(reflection_results) + len(risk_results)
+    ),
     "failed_assertions": 0,
     "live_api_calls": 0,
 }
 print(summary)
 assert summary["failed_assertions"] == 0
+assert summary["total_declared_checks"] == 46
 assert summary["live_api_calls"] == 0"""
     ),
     new_markdown_cell(
         """## Takeaways
 
-- The executed notebook passed all 17 deterministic checks/cases represented
+- The executed notebook passed all 46 deterministic checks/cases represented
   in the summary above.
 - Five themes map to five explicit focus passages plus wider context ranges; no
   model chooses or writes displayed Scripture.

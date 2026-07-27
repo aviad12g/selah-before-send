@@ -24,6 +24,6 @@ Selah uses a two-stage, provenance-first pipeline:
 
 Strict type, form, word, and length validation; bounded inputs; a passage allowlist; timeouts; token caching; and fail-closed errors constrain the model path. A deterministic safety gate stops threats, self-harm, abuse, and immediate-danger language before any AI call. Live mode also has a best-effort quota guard.
 
-The application does not persist messages; in live mode, Gloo necessarily processes the post and draft server-side under its provider terms. If credentials are absent, the public prototype uses a clearly labeled deterministic fixture so the interaction remains reviewable without pretending the APIs ran. An executed public notebook records 17 deterministic contract checks and zero external calls.
+The application does not persist messages; in live mode, Gloo necessarily processes the post and draft server-side under its provider terms. If credentials are absent, the public prototype uses a clearly labeled deterministic fixture so the interaction remains reviewable without pretending the APIs ran. An executed public notebook records 46 deterministic contract checks and zero external calls.
 
 **Validation status:** The curated prototype path is implemented. The live Gloo + YouVersion path requires registered participant credentials and an end-to-end validation run before it should be described as live.

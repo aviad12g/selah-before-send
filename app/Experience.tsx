@@ -43,6 +43,8 @@ export function Experience() {
   >("compose");
   const [showContext, setShowContext] = useState(false);
   const [error, setError] = useState("");
+  const [supportUrl, setSupportUrl] = useState("");
+  const [riskLocked, setRiskLocked] = useState(false);
   const [heldUntil, setHeldUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(10 * 60);
   const panelRef = useRef<HTMLElement>(null);
@@ -72,6 +74,7 @@ export function Experience() {
       return;
     }
     setError("");
+    setSupportUrl("");
     setPhase("loading");
     try {
       const response = await fetch("/api/selah", {
@@ -79,8 +82,17 @@ export function Experience() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ post: samplePost, draft: draft.trim() }),
       });
-      const payload = (await response.json()) as SelahResponse & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Selah could not open.");
+      const payload = (await response.json()) as SelahResponse & {
+        error?: string;
+        supportUrl?: string;
+        code?: string;
+      };
+      if (!response.ok) {
+        setSupportUrl(payload.supportUrl ?? "");
+        if (payload.code === "HIGH_RISK") setRiskLocked(true);
+        throw new Error(payload.error || "Selah could not open.");
+      }
+      setRiskLocked(false);
       setResult(payload);
       setShowContext(false);
       setPhase("pause");
@@ -107,6 +119,7 @@ export function Experience() {
   }
 
   function sendAnyway() {
+    if (riskLocked) return;
     setPhase("sent");
   }
 
@@ -115,6 +128,8 @@ export function Experience() {
     setResult(null);
     setShowContext(false);
     setError("");
+    setSupportUrl("");
+    setRiskLocked(false);
     setHeldUntil(null);
     setRemainingSeconds(10 * 60);
     setPhase("compose");
@@ -235,9 +250,9 @@ export function Experience() {
                     className="quiet-button"
                     type="button"
                     onClick={sendAnyway}
-                    disabled={phase === "loading"}
+                    disabled={phase === "loading" || riskLocked}
                   >
-                    Send without pause
+                    {riskLocked ? "Safety pause active" : "Send without pause"}
                   </button>
                   <button
                     className="primary-button"
@@ -245,15 +260,24 @@ export function Experience() {
                     disabled={phase === "loading"}
                   >
                     <span>
-                      {phase === "loading" ? "Opening Selah" : "Pause before sending"}
+                      {phase === "loading"
+                        ? "Opening Selah"
+                        : riskLocked
+                          ? "Recheck this draft"
+                          : "Pause before sending"}
                     </span>
                     <span aria-hidden="true">{phase === "loading" ? "•••" : "||"}</span>
                   </button>
                 </div>
                 {error ? (
-                  <p className="form-error" role="alert">
-                    {error}
-                  </p>
+                  <div className="form-error" role="alert">
+                    <p>{error}</p>
+                    {supportUrl ? (
+                      <a href={supportUrl} target="_blank" rel="noreferrer">
+                        Find a verified helpline in your country
+                      </a>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </form>

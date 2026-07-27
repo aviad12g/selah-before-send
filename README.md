@@ -84,7 +84,8 @@ Scripture outside the supplied text.
 - External calls have timeouts and the live path fails closed if any call or
   validation step fails.
 - A deterministic high-risk-language gate stops drafts involving threats,
-  self-harm, abuse, or immediate danger before any AI call.
+  self-harm, abuse, or immediate danger before any AI call and offers the
+  international [Find A Helpline](https://findahelpline.com/) directory.
 - The live path has a best-effort per-edge-client quota guard. A production
   integration should also configure a platform-level rate-limiting rule.
 - Gloo access tokens are cached in worker memory until shortly before expiry;
@@ -159,7 +160,7 @@ The `submission/` directory contains:
 
 - the final 462-word Kaggle writeup;
 - a timed, sub-three-minute video script and shot list;
-- an executed, public-ready notebook with 17 deterministic checks/cases;
+- an executed, public-ready notebook with 46 deterministic checks/cases;
 - the notebook generator; and
 - a truth-gated delivery checklist.
 
