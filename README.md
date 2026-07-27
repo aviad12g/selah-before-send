@@ -153,6 +153,18 @@ milestone is a credentialed API run with captured provenance, followed by
 safety review and small, consent-based usability testing before any real
 posting integration.
 
+## Competition package
+
+The `submission/` directory contains:
+
+- the final 462-word Kaggle writeup;
+- a timed, sub-three-minute video script and shot list;
+- an executed, public-ready notebook with 17 deterministic checks/cases;
+- the notebook generator; and
+- a truth-gated delivery checklist.
+
+The landscape cover image is `public/og.png`.
+
 ## License
 
 The application source is available under the [MIT License](LICENSE). The
