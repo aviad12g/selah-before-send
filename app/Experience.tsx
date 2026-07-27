@@ -2,11 +2,19 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import {
+  SAMPLE_DRAFT as sampleDraft,
+  SAMPLE_POST as samplePost,
+} from "./selah-fixture";
 
 type SelahResponse = {
   assessment: {
     temperature: string;
     underlyingNeed: string;
+    risk: {
+      level: "none" | "concerning" | "urgent";
+      category: "none" | "self-harm" | "threat" | "abuse" | "immediate-danger";
+    };
   };
   passage: {
     content: string;
@@ -24,11 +32,6 @@ type SelahResponse = {
   source: "curated-demo" | "live";
 };
 
-const samplePost =
-  "If this mattered to you, you would have shown up. Stop calling it complicated.";
-const sampleDraft =
-  "You don’t get to decide what mattered to me. You have no idea what I was carrying—maybe stop making everything about you.";
-
 function formatRemaining(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -44,7 +47,7 @@ export function Experience() {
   const [showContext, setShowContext] = useState(false);
   const [error, setError] = useState("");
   const [supportUrl, setSupportUrl] = useState("");
-  const [riskLocked, setRiskLocked] = useState(false);
+  const [safetyStopped, setSafetyStopped] = useState(false);
   const [heldUntil, setHeldUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(10 * 60);
   const panelRef = useRef<HTMLElement>(null);
@@ -89,10 +92,10 @@ export function Experience() {
       };
       if (!response.ok) {
         setSupportUrl(payload.supportUrl ?? "");
-        if (payload.code === "HIGH_RISK") setRiskLocked(true);
+        if (payload.code === "HIGH_RISK") setSafetyStopped(true);
         throw new Error(payload.error || "Selah could not open.");
       }
-      setRiskLocked(false);
+      setSafetyStopped(false);
       setResult(payload);
       setShowContext(false);
       setPhase("pause");
@@ -119,7 +122,6 @@ export function Experience() {
   }
 
   function sendAnyway() {
-    if (riskLocked) return;
     setPhase("sent");
   }
 
@@ -129,7 +131,7 @@ export function Experience() {
     setShowContext(false);
     setError("");
     setSupportUrl("");
-    setRiskLocked(false);
+    setSafetyStopped(false);
     setHeldUntil(null);
     setRemainingSeconds(10 * 60);
     setPhase("compose");
@@ -241,7 +243,9 @@ export function Experience() {
                   >
                     provider terms
                   </a>
-                  . Selah never posts to the social network.
+                  . Without live credentials, only the supplied sample can
+                  replay the labeled preview; edited drafts receive no
+                  reflection. Selah never posts to the social network.
                 </p>
 
                 <div className="composer-actions">
@@ -250,9 +254,9 @@ export function Experience() {
                     className="quiet-button"
                     type="button"
                     onClick={sendAnyway}
-                    disabled={phase === "loading" || riskLocked}
+                    disabled={phase === "loading"}
                   >
-                    {riskLocked ? "Safety pause active" : "Send without pause"}
+                    {safetyStopped ? "Send without Selah" : "Send without pause"}
                   </button>
                   <button
                     className="primary-button"
@@ -262,7 +266,7 @@ export function Experience() {
                     <span>
                       {phase === "loading"
                         ? "Opening Selah"
-                        : riskLocked
+                        : safetyStopped
                           ? "Recheck this draft"
                           : "Pause before sending"}
                     </span>
@@ -306,7 +310,7 @@ export function Experience() {
               </span>
               <div>
                 <span>YOUR CHOICE REMAINS YOURS</span>
-                <h2>Selah never takes the send button.</h2>
+                <h2>Your final words stay yours.</h2>
                 <p>
                   This prototype does not connect to a real social account, so
                   nothing was posted.
@@ -438,8 +442,8 @@ export function Experience() {
             <b>01</b>
             <h3>Read the temperature</h3>
             <p>
-              Gloo classifies a possible tension and underlying need in a fixed
-              schema.
+              Gloo classifies tension, underlying need, and a bounded semantic
+              risk signal. Any risk stops the reflection path.
             </p>
           </article>
           <article>

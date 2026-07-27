@@ -23,7 +23,8 @@ cells = [
 
 This companion notebook tests the deterministic controls around the Selah
 prototype: its five-theme passage allowlist, bounded Gloo JSON contracts,
-high-risk-language stop, and pinned offline Scripture fixture.
+non-exhaustive high-risk-language first pass, semantic risk contract, and
+fail-closed pinned offline Scripture fixture.
 
 It **does not** claim that the credentialed Gloo → YouVersion → Gloo path ran.
 That live integration remains a separate deployment validation gate."""
@@ -40,7 +41,8 @@ grounded in that supplied text.
 
 - This notebook mirrors the server's deterministic contracts at submission
   time; the TypeScript route remains the implementation source of truth.
-- The offline fixture is a reviewer aid, not evidence of a live API response.
+- The offline fixture replays only one exact sample. Novel text is rejected
+  when live semantic screening is unavailable.
 - Passing these checks establishes contract behavior, not pastoral safety,
   user impact, or model robustness against every adversarial input."""
     ),
@@ -75,10 +77,14 @@ FIXTURE_CONTEXT = (
     "will be blessed in what he does."
 )
 
+EXPECTED_FIXTURE_SHA256 = (
+    "78ba87a010e147520aaae1686c1f6f7b601a1c4fbcb73179e1e6dd0c5ec5eeb9"
+)
 fixture_sha256 = sha256(FIXTURE_CONTEXT.encode("utf-8")).hexdigest()
 assert len(PASSAGES) == 5
 assert len({focus for focus, _ in PASSAGES.values()}) == 5
 assert PASSAGES["listen"] == ("JAS.1.19-20", "JAS.1.19-25")
+assert fixture_sha256 == EXPECTED_FIXTURE_SHA256
 
 print({
     "themes": len(PASSAGES),
@@ -90,54 +96,106 @@ print({
     ),
     new_markdown_cell("## Results\n\n### 2. Exercise the bounded assessment contract"),
     new_code_cell(
-        """ALLOWED_TEMPERATURES = {"Low heat", "Rising heat", "High heat"}
+        """import re
+
+ALLOWED_TEMPERATURES = {"Low heat", "Rising heat", "High heat"}
+ALLOWED_RISK_LEVELS = {"none", "concerning", "urgent"}
+ALLOWED_RISK_CATEGORIES = {
+    "none", "self-harm", "threat", "abuse", "immediate-danger"
+}
 
 def word_count(value):
     return len(value.strip().split())
 
-def valid_assessment(value):
+def assessment_decision(value):
     if not isinstance(value, dict):
-        return False
+        return "invalid"
+    risk = value.get("risk")
+    if not isinstance(risk, dict):
+        return "invalid"
+    level = risk.get("level")
+    category = risk.get("category")
+    valid_risk = (
+        (level == "none" and category == "none")
+        or (
+            level in {"concerning", "urgent"}
+            and category in ALLOWED_RISK_CATEGORIES - {"none"}
+        )
+    )
+    if level not in ALLOWED_RISK_LEVELS or not valid_risk:
+        return "invalid"
+    if level != "none":
+        return "blocked"
+    if (
+        set(value) != {"theme", "temperature", "underlyingNeed", "risk"}
+        or set(risk) != {"level", "category"}
+    ):
+        return "invalid"
     need = value.get("underlyingNeed")
-    return (
+    valid_safe_assessment = (
         value.get("theme") in PASSAGES
         and value.get("temperature") in ALLOWED_TEMPERATURES
         and isinstance(need, str)
-        and need.strip().startswith("To ")
+        and bool(re.match(r"^To\\s+\\S", need.strip()))
         and 0 < word_count(need) <= 10
         and len(need.strip()) <= 72
     )
+    return "safe" if valid_safe_assessment else "invalid"
+
+valid_assessment_fixture = {
+    "theme": "listen",
+    "temperature": "High heat",
+    "underlyingNeed": "To be understood before being judged",
+    "risk": {"level": "none", "category": "none"},
+}
 
 assessment_cases = [
-    ("valid", {
-        "theme": "listen",
-        "temperature": "High heat",
-        "underlyingNeed": "To be understood before being judged",
-    }, True),
+    ("valid safe assessment", valid_assessment_fixture, "safe"),
     ("unknown theme", {
+        **valid_assessment_fixture,
         "theme": "retaliation",
-        "temperature": "High heat",
-        "underlyingNeed": "To be heard",
-    }, False),
+    }, "invalid"),
     ("empty need", {
-        "theme": "listen",
-        "temperature": "High heat",
+        **valid_assessment_fixture,
         "underlyingNeed": "",
-    }, False),
+    }, "invalid"),
+    ("bare To need", {
+        **valid_assessment_fixture,
+        "underlyingNeed": "To",
+    }, "invalid"),
     ("wrong prefix", {
-        "theme": "listen",
-        "temperature": "High heat",
+        **valid_assessment_fixture,
         "underlyingNeed": "Wants to be heard",
-    }, False),
+    }, "invalid"),
     ("too many words", {
-        "theme": "listen",
-        "temperature": "High heat",
+        **valid_assessment_fixture,
         "underlyingNeed": "To be seen and heard and understood without any judgment at all",
-    }, False),
+    }, "invalid"),
+    ("missing risk", {
+        key: value for key, value in valid_assessment_fixture.items() if key != "risk"
+    }, "invalid"),
+    ("unknown risk level", {
+        **valid_assessment_fixture,
+        "risk": {"level": "elevated", "category": "threat"},
+    }, "invalid"),
+    ("invalid none/category combination", {
+        **valid_assessment_fixture,
+        "risk": {"level": "none", "category": "abuse"},
+    }, "invalid"),
+    ("unexpected field", {
+        **valid_assessment_fixture,
+        "explanation": "extra model prose",
+    }, "invalid"),
+    ("risk-first short circuit", {
+        "theme": "not-a-theme",
+        "temperature": "unknown",
+        "underlyingNeed": "",
+        "risk": {"level": "urgent", "category": "abuse"},
+    }, "blocked"),
 ]
 
 assessment_results = [
-    (name, valid_assessment(value), expected)
+    (name, assessment_decision(value), expected)
     for name, value, expected in assessment_cases
 ]
 assert all(observed == expected for _, observed, expected in assessment_results)
@@ -200,7 +258,7 @@ reflection_results = [
 assert all(observed == expected for _, observed, expected in reflection_results)
 print(reflection_results)"""
     ),
-    new_markdown_cell("### 4. Verify the deterministic high-risk stop"),
+    new_markdown_cell("### 4. Verify the deterministic high-risk first pass"),
     new_code_cell(
         """import re
 import unicodedata
@@ -241,7 +299,7 @@ LOCATION_THREAT = re.compile(r"\\b(?:i|we)\\s+know\\s+where\\s+you\\s+live\\b")
 PERSONAL_ABUSE = [
     re.compile(r"\\bi\\s+(?:was|am|have been)\\s+(?:abused|stalked)\\b"),
     re.compile(
-        r"\\b(?:my\\s+[^\\W\\d_'-]+|he|she|they|someone|somebody)\\s+"
+        r"\\b(?:my\\s+[^\\W\\d_]+(?:['-][^\\W\\d_]+)*|he|she|they|someone|somebody)\\s+"
         r"(?:(?:is|was|has been)\\s+)?(?:abusing|stalking|abused|stalked)\\s+me\\b"
     ),
     re.compile(r"\\byou(?:'re| are| were| have been)?\\s*(?:abusing|stalking|abused|stalked)\\s+me\\b"),
@@ -295,6 +353,7 @@ risk_cases = [
     ("personal abuse", "My pastor abused me.", True),
     ("ongoing abuse", "He is abusing me.", True),
     ("ongoing stalking", "My ex is stalking me.", True),
+    ("hyphenated relationship", "My ex-partner is stalking me.", True),
     ("second-person stalking", "You're stalking me.", True),
     ("explicit self-harm", "I want to kill myself.", True),
 ]
@@ -305,36 +364,81 @@ risk_results = [
 assert all(observed == expected for _, observed, expected in risk_results)
 print(risk_results)"""
     ),
-    new_markdown_cell("### 5. Reconcile the executed checks"),
+    new_markdown_cell(
+        "### 5. Verify that the credential-free preview rejects novel text"
+    ),
+    new_code_cell(
+        """PINNED_POST = (
+    "If this mattered to you, you would have shown up. "
+    "Stop calling it complicated."
+)
+PINNED_DRAFT = (
+    "You don’t get to decide what mattered to me. You have no idea what I was "
+    "carrying—maybe stop making everything about you."
+)
+
+def offline_preview_allowed(post, draft):
+    return post.strip() == PINNED_POST and draft.strip() == PINNED_DRAFT
+
+offline_preview_cases = [
+    ("exact pinned sample", PINNED_POST, PINNED_DRAFT, True),
+    ("novel ordinary draft", PINNED_POST, "I disagree, but I want to listen.", False),
+    (
+        "novel safety disclosure",
+        PINNED_POST,
+        "She keeps hitting me and I don't know what to do.",
+        False,
+    ),
+]
+offline_preview_results = [
+    (name, offline_preview_allowed(post, draft), expected)
+    for name, post, draft, expected in offline_preview_cases
+]
+assert all(
+    observed == expected
+    for _, observed, expected in offline_preview_results
+)
+print(offline_preview_results)"""
+    ),
+    new_markdown_cell("### 6. Reconcile the executed checks"),
     new_code_cell(
         """summary = {
-    "passage_allowlist_checks": 3,
+    "passage_allowlist_and_fixture_checks": 4,
     "assessment_contract_cases": len(assessment_results),
     "reflection_contract_cases": len(reflection_results),
-    "risk_gate_cases": len(risk_results),
+    "deterministic_risk_floor_cases": len(risk_results),
+    "offline_preview_cases": len(offline_preview_results),
     "total_declared_checks": (
-        3 + len(assessment_results) + len(reflection_results) + len(risk_results)
+        4
+        + len(assessment_results)
+        + len(reflection_results)
+        + len(risk_results)
+        + len(offline_preview_results)
     ),
     "failed_assertions": 0,
     "live_api_calls": 0,
 }
 print(summary)
 assert summary["failed_assertions"] == 0
-assert summary["total_declared_checks"] == 46
+assert summary["total_declared_checks"] == 57
 assert summary["live_api_calls"] == 0"""
     ),
     new_markdown_cell(
         """## Takeaways
 
-- The executed notebook passed all 46 deterministic checks/cases represented
+- The executed notebook passed all 57 deterministic checks/cases represented
   in the summary above.
 - Five themes map to five explicit focus passages plus wider context ranges; no
   model chooses or writes displayed Scripture.
-- Invalid but schema-shaped assessment/reflection examples are rejected by the
+- A valid non-`none` risk short-circuits before unrelated assessment fields are
+  used. Invalid safe assessment/reflection examples are rejected by the
   mirrored bounds.
-- High-risk phrases stop before the ordinary reflection path.
-- The exact offline BSB context fixture is pinned by SHA-256 and must remain
-  visibly labeled as an offline preview.
+- The deterministic high-risk matcher is a non-exhaustive pre-API floor, not a
+  claim of comprehensive detection. In live mode, any validated non-`none`
+  semantic risk result stops before Scripture retrieval and reflection.
+- The exact offline BSB context fixture is pinned by SHA-256. Without live
+  semantic screening, only that sample may receive the fixture response;
+  novel text fails closed.
 
 ### Remaining validation gap
 

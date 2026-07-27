@@ -20,11 +20,13 @@ The prototype supports three outcomes:
 
 ## Status
 
-The full interaction and deterministic curated-preview path are implemented.
+The full interaction and exact-sample curated-preview path are implemented.
 The live orchestration path is present in the server route but requires
 registered Gloo AI Studio and YouVersion Platform credentials plus an
-end-to-end validation run. Until that validation is complete, the deployed
-experience must not be described as using live API responses.
+end-to-end validation run. Without those credentials, only the pinned sample
+can receive a preview; all novel drafts fail closed. Until live validation is
+complete, the deployed experience must not be described as using live API
+responses.
 
 No user study has been run. This repository demonstrates the product concept
 and technical pipeline, not measured behavior change.
@@ -36,7 +38,9 @@ original post + draft
         |
         v
 Gloo assessment
-(temperature + need + fixed theme)
+(temperature + need + fixed theme + semantic risk)
+        |
+        +-- risk != none --> stop; no Scripture retrieval or reflection
         |
         v
 curated passage identifier
@@ -57,9 +61,11 @@ user chooses: edit / pause / send anyway
 
 The first Gloo request returns a fixed JSON contract: conversation
 temperature, a charitable description of the underlying need, and one of five
-allowed themes (`listen`, `gentleness`, `repair`, `judgment`, or `burden`). The
-prompt forbids diagnosis, protected-attribute inference, blame, preaching, and
-Scripture quotation.
+allowed themes (`listen`, `gentleness`, `repair`, `judgment`, or `burden`). It
+also returns a bounded semantic risk level and category. Any validated risk
+other than `none` stops the pipeline before passage retrieval or reflection.
+The prompt forbids diagnosis, protected-attribute inference, blame, preaching,
+and Scripture quotation.
 
 ### 2. Retrieve, never invent
 
@@ -81,11 +87,19 @@ Scripture outside the supplied text.
 - Inputs are trimmed and bounded; model outputs are schema-checked and
   length-bounded.
 - Passage selection is restricted to a fixed allowlist.
-- External calls have timeouts and the live path fails closed if any call or
-  validation step fails.
-- A deterministic high-risk-language gate stops drafts involving threats,
-  self-harm, abuse, or immediate danger before any AI call and offers the
+- External calls have timeouts and the live path fails closed if any required
+  call or validation step fails. Bible metadata has a pinned attribution
+  fallback.
+- A non-exhaustive deterministic first pass catches explicit high-risk
+  phrasing before any AI call. In live mode, the bounded Gloo assessment adds
+  semantic triage for paraphrase; any non-`none` risk result stops before
+  YouVersion retrieval or the reflection call. A safety stop offers the
   international [Find A Helpline](https://findahelpline.com/) directory.
+- The deterministic layer is a floor, not a claim of comprehensive detection.
+  If live semantic screening is unavailable, novel drafts receive no fixture
+  or reflection.
+- Neither safety layer is claimed to be comprehensive; this prototype is not a
+  crisis service or production moderation system.
 - The live path has a best-effort per-edge-client quota guard. A production
   integration should also configure a platform-level rate-limiting rule.
 - Gloo access tokens are cached in worker memory until shortly before expiry;
@@ -98,8 +112,9 @@ Scripture outside the supplied text.
   Gloo for both AI stages. YouVersion receives passage identifiers, not the
   user's draft. Provider-side data handling is governed by those services and
   should be reviewed before production use.
-- Nothing posts automatically, and the user can always close the pause or send
-  anyway.
+- Nothing posts automatically. When a high-risk stop fires, Selah withholds the
+  reflection and does not advise whether to send; the user can recheck an
+  edited draft or leave the simulated flow.
 - API failures leave the draft in the browser and return a non-posting error
   state.
 
@@ -107,11 +122,13 @@ Scripture outside the supplied text.
 
 | Mode | Condition | What the interface shows |
 | --- | --- | --- |
-| Curated preview | One or more API credentials are absent | A deterministic, labeled response with `source: "curated-demo"` |
+| Curated preview | One or more API credentials are absent and the input exactly matches the pinned sample | A deterministic, labeled response with `source: "curated-demo"` |
+| Fail-closed preview | One or more API credentials are absent and the input differs from the pinned sample | No reflection; `LIVE_SAFETY_UNAVAILABLE` |
 | Live path | All three credentials are present and calls succeed | Retrieved and generated output labeled `source: "live"` |
 
 The curated mode exists so reviewers can inspect the complete interaction
-without a secret key. It must not be represented as an API result.
+without a secret key. It cannot classify user-entered text and must not be
+represented as an API result.
 
 ## Local setup
 
@@ -141,10 +158,11 @@ npm run typecheck
 npm test
 ```
 
-`npm test` builds the vinext/Cloudflare worker and verifies both the
-server-rendered surface and the deterministic API behavior. A credentialed
-end-to-end test of both external APIs remains required before the live
-integration claim is submission-ready.
+`npm test` builds the vinext/Cloudflare worker and verifies the server-rendered
+surface, deterministic safety floor, exact-sample preview, and fail-closed
+behavior for novel drafts. A credentialed end-to-end test of both external
+APIs and the semantic safety stop remains required before the live integration
+claim is submission-ready.
 
 ## Scope and next steps
 
@@ -158,9 +176,9 @@ posting integration.
 
 The `submission/` directory contains:
 
-- the final 462-word Kaggle writeup;
+- the final, sub-500-word Kaggle writeup;
 - a timed, sub-three-minute video script and shot list;
-- an executed, public-ready notebook with 46 deterministic checks/cases;
+- an executed, public-ready notebook with 57 deterministic checks/cases;
 - the notebook generator; and
 - a truth-gated delivery checklist.
 

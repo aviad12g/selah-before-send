@@ -9,15 +9,17 @@ Jerusalem: **August 1, 2026 at 07:59 IDT**
 - [x] Clearly separated offline-preview and live-API modes
 - [x] Gloo → YouVersion → Gloo server orchestration
 - [x] Exact BSB offline fixture with attribution
+- [x] Credential-free preview restricted to the exact pinned sample
 - [x] Wider Scripture context passed into the reflection stage
 - [x] Strict assessment/reflection output contracts
-- [x] Pre-AI high-risk-language stop
+- [x] Non-exhaustive pre-AI high-risk-language first pass
+- [x] Bounded semantic risk contract that stops live retrieval/reflection
 - [x] Upstream/overall timeouts, token cache, and live quota guard
 - [x] Real ten-minute browser countdown
 - [x] Accessible focus transfer, context controls, and improved contrast
-- [x] Lint, strict TypeScript, production build, and 5/5 tests passing
-- [x] Executed public notebook with 46 deterministic checks/cases
-- [x] 462-word final writeup
+- [x] Lint, strict TypeScript, production build, and 9/9 tests passing
+- [x] Executed public notebook with 57 deterministic checks/cases
+- [x] Sub-500-word final writeup
 - [x] Sub-three-minute video script and shot list
 - [x] Exact-text landscape cover in `public/og.png`
 - [x] Public-ready README, MIT license, and empty credential template
@@ -45,6 +47,8 @@ them only as deployment secrets named `GLOO_CLIENT_ID`,
   and Gloo routing metadata without recording prompts, credentials, or tokens.
 - [ ] Verify that a forced upstream failure returns no social post and no
   fabricated Scripture.
+- [ ] Run redacted semantic-risk probes and verify every non-`none` result
+  stops before YouVersion retrieval and the second Gloo call.
 - [ ] Keep platform-level rate limiting enabled before public live mode.
 
 ## Kaggle delivery
