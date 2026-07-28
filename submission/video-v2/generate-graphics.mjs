@@ -220,7 +220,7 @@ function architectureFrame() {
     <text x="112" y="124" fill="${acid}" font-family="${sans}" font-size="16"
       font-weight="850" letter-spacing="2.6">THE BOUNDED PATH</text>
     <text x="112" y="244" fill="${paper}" font-family="${serif}" font-size="68"
-      font-weight="400">Three calls. Clear boundaries.</text>
+      font-weight="400">Three stages. Clear boundaries.</text>
     <line x1="112" y1="322" x2="1808" y2="322" stroke="#42443c"/>
 
     <text x="112" y="462" fill="${paper}" font-family="${sans}" font-size="52"

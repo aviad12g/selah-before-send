@@ -26,8 +26,11 @@ prototype: its five-theme passage allowlist, bounded Gloo JSON contracts,
 non-exhaustive high-risk-language first pass, semantic risk contract, and
 fail-closed pinned offline Scripture fixture.
 
-It **does not** claim that the credentialed Gloo → YouVersion → Gloo path ran.
-That live integration remains a separate deployment validation gate."""
+This notebook itself makes zero external calls. Separately, public production
+v4, built from source commit
+`f63ab0b175d08f8450d8acbe89071a5e79271c74`, passed the redacted production
+validator at `2026-07-28T18:16:16.500Z`. The public-safe result is recorded in
+`production-validation-redacted.json`."""
     ),
     new_markdown_cell(
         """## Context & Methods
@@ -440,14 +443,19 @@ assert summary["live_api_calls"] == 0"""
   semantic screening, only that sample may receive the fixture response;
   novel text fails closed.
 
-### Remaining validation gap
+### Separate production validation
 
 No external credential is embedded here, and this notebook makes zero live API
-calls. Before the entry claims a live integration, the deployed server must
-return `source: "live"` in a redacted end-to-end run and show the retrieved
-reference, context, version, copyright, latency, and provider provenance."""
+calls. Production v4/source `f63ab0b` separately passed all three redacted
+validator paths at `2026-07-28T18:16:16.500Z`: completed live orchestration with
+YouVersion provenance, a deterministic safety stop with zero provider stages
+attempted, and an authenticated provider failure with no generated output.
+See `production-validation-redacted.json` for the public-safe stage audit."""
     ),
 ]
+
+for index, cell in enumerate(cells, start=1):
+    cell["id"] = f"selah-{index:02d}"
 
 
 notebook = new_notebook(
@@ -465,6 +473,13 @@ notebook = new_notebook(
         "selah": {
             "execution_engine": "CPython top-to-bottom via submission/build_notebook.py",
             "scope": "deterministic controls only; zero external API calls",
+            "production_validation": {
+                "executed_at": "2026-07-28T18:16:16.500Z",
+                "site_version": 4,
+                "source_commit": "f63ab0b175d08f8450d8acbe89071a5e79271c74",
+                "result": "passed",
+                "report": "production-validation-redacted.json",
+            },
         },
     },
 )

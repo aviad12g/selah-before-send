@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "kind": "redacted-production-validation",
+  "targetOrigin": "https://selah-before-send.aviadcoh.chatgpt.site",
+  "siteVersion": 4,
+  "sourceCommit": "f63ab0b175d08f8450d8acbe89071a5e79271c74",
+  "executedAt": "2026-07-28T18:16:16.500Z",
+  "result": "passed",
+  "validator": "scripts/validate-production.mjs",
+  "redaction": {
+    "credentialsIncluded": false,
+    "requestTextIncluded": false,
+    "scriptureTextIncluded": false,
+    "reflectionTextIncluded": false,
+    "signaturesIncluded": false
+  },
+  "checks": {
+    "live": {
+      "status": "passed",
+      "httpStatus": 200,
+      "source": "live",
+      "decision": "completed-live",
+      "provenance": {
+        "provider": "YouVersion Platform",
+        "bibleId": 3034,
+        "bibleVersion": "BSB",
+        "focusPassageIdPresent": true,
+        "contextPassageIdPresent": true,
+        "referencePresent": true,
+        "contextReferencePresent": true,
+        "copyrightPresent": true
+      },
+      "providerStagesAttempted": {
+        "glooAssessment": true,
+        "youVersion": true,
+        "glooReflection": true
+      },
+      "providerStagesCompleted": {
+        "glooAssessment": true,
+        "youVersion": true,
+        "glooReflection": true
+      }
+    },
+    "deterministicSafety": {
+      "status": "passed",
+      "httpStatus": 422,
+      "decision": "blocked-deterministic",
+      "providerStagesAttempted": {
+        "glooAssessment": false,
+        "youVersion": false,
+        "glooReflection": false
+      },
+      "providerStagesCompleted": {
+        "glooAssessment": false,
+        "youVersion": false,
+        "glooReflection": false
+      },
+      "generatedOutputAbsent": true,
+      "supportUrl": "https://findahelpline.com/"
+    },
+    "providerFailure": {
+      "status": "passed",
+      "httpStatus": 502,
+      "decision": "failed-closed",
+      "fault": "authenticated synthetic provider failure",
+      "providerStagesAttempted": {
+        "glooAssessment": true,
+        "youVersion": false,
+        "glooReflection": false
+      },
+      "providerStagesCompleted": {
+        "glooAssessment": false,
+        "youVersion": false,
+        "glooReflection": false
+      },
+      "generatedOutputAbsent": true
+    }
+  },
+  "note": "This report contains only validator assertions and redacted stage/provenance facts. It contains no credentials, request text, Scripture text, reflection text, or signatures."
+}
