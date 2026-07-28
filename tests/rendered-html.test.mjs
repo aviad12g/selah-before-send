@@ -7,6 +7,25 @@ const SAMPLE_POST =
 const SAMPLE_DRAFT =
   "You don’t get to decide what mattered to me. You have no idea what I was carrying—maybe stop making everything about you.";
 
+function toolCompletion(name, args) {
+  return Response.json({
+    choices: [
+      {
+        message: {
+          tool_calls: [
+            {
+              function: {
+                name,
+                arguments: JSON.stringify(args),
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+}
+
 async function dispatch(request) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -129,49 +148,35 @@ test("returns the labeled deterministic preview without credentials", async () =
 
 test("returns exact YouVersion provenance and a completed live audit", async () => {
   const upstreamCalls = [];
+  const completionRequests = [];
   let completionCount = 0;
 
   await withLiveCredentials(
-    async (input) => {
+    async (input, init) => {
       const url = String(input);
       upstreamCalls.push(url);
       if (url === "https://platform.ai.gloo.com/oauth2/token") {
         return Response.json({ access_token: "test-token", expires_in: 300 });
       }
       if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
+        completionRequests.push(JSON.parse(init.body));
         completionCount += 1;
         if (completionCount === 1) {
-          return Response.json({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({
-                    theme: "listen",
-                    temperature: "Rising heat",
-                    underlyingNeed: "To be heard before deciding",
-                    risk: { level: "none", category: "none" },
-                  }),
-                },
-              },
-            ],
+          return toolCompletion("submit_selah_assessment", {
+            theme: "listen",
+            temperature: "Rising heat",
+            underlyingNeed: "To be heard before deciding",
+            risk: { level: "none", category: "none" },
           });
         }
-        return Response.json({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  question: "What can you acknowledge before making your request?",
-                  editPrompt:
-                    "Keep your point, name what you heard, then ask for one next step.",
-                  threeMoves: [
-                    "Name what you heard",
-                    "State your concern",
-                    "Ask one clear question",
-                  ],
-                }),
-              },
-            },
+        return toolCompletion("submit_selah_reflection", {
+          question: "What can you acknowledge before making your request?",
+          editPrompt:
+            "Keep your point, name what you heard, then ask for one next step.",
+          threeMoves: [
+            "Name what you heard",
+            "State your concern",
+            "Ask one clear question",
           ],
         });
       }
@@ -254,6 +259,25 @@ test("returns exact YouVersion provenance and a completed live audit", async () 
       assert.equal(
         upstreamCalls.filter((url) => url.includes("api.youversion.com")).length,
         3,
+      );
+      assert.deepEqual(
+        completionRequests.map((request) => ({
+          toolChoice: request.tool_choice,
+          toolName: request.tools?.[0]?.function?.name,
+          maxTokens: request.max_tokens,
+        })),
+        [
+          {
+            toolChoice: "required",
+            toolName: "submit_selah_assessment",
+            maxTokens: 512,
+          },
+          {
+            toolChoice: "required",
+            toolName: "submit_selah_reflection",
+            maxTokens: 512,
+          },
+        ],
       );
     },
   );
@@ -371,6 +395,69 @@ test("fails closed when a real provider adapter returns an error", async () => {
         upstreamCalls.some((url) => url.includes("api.youversion.com")),
         false,
       );
+    },
+  );
+});
+
+test("fails closed when Gloo omits the required structured tool call", async () => {
+  const upstreamCalls = [];
+
+  await withLiveCredentials(
+    async (input) => {
+      const url = String(input);
+      upstreamCalls.push(url);
+      if (url === "https://platform.ai.gloo.com/oauth2/token") {
+        return Response.json({ access_token: "test-token", expires_in: 300 });
+      }
+      if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
+        return Response.json({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"theme":"listen","temperature":"Low heat","underlyingNeed":',
+              },
+            },
+          ],
+        });
+      }
+      throw new Error(`No downstream call was expected: ${url}`);
+    },
+    async () => {
+      const originalConsoleError = console.error;
+      console.error = () => {};
+      let response;
+      try {
+        response = await dispatch(
+          new Request("http://localhost/api/selah", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "cf-connecting-ip": "missing-tool-call-test",
+            },
+            body: JSON.stringify({
+              post: "A teammate asked for a clear update on the plan.",
+              draft:
+                "I disagree with the change, but I want to reply carefully and keep the next step clear.",
+            }),
+          }),
+        );
+      } finally {
+        console.error = originalConsoleError;
+      }
+
+      assert.equal(response.status, 502);
+      const payload = await response.json();
+      assert.equal(payload.code, "UPSTREAM_UNAVAILABLE");
+      assert.deepEqual(payload.audit.providerStagesCompleted, {
+        glooAssessment: false,
+        youVersion: false,
+        glooReflection: false,
+      });
+      assert.deepEqual(upstreamCalls, [
+        "https://platform.ai.gloo.com/oauth2/token",
+        "https://platform.ai.gloo.com/ai/v2/chat/completions",
+      ]);
     },
   );
 });
@@ -631,19 +718,11 @@ test("stops a live semantic-risk result before Scripture retrieval", async () =>
         return Response.json({ access_token: "test-token", expires_in: 300 });
       }
       if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
-        return Response.json({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  theme: "not-a-theme",
-                  temperature: "unknown",
-                  underlyingNeed: "",
-                  risk: { level: "urgent", category: "abuse" },
-                }),
-              },
-            },
-          ],
+        return toolCompletion("submit_selah_assessment", {
+          theme: "not-a-theme",
+          temperature: "unknown",
+          underlyingNeed: "",
+          risk: { level: "urgent", category: "abuse" },
         });
       }
       throw new Error(`Unexpected upstream call: ${url}`);
@@ -686,19 +765,11 @@ test("rejects an empty assessment need before Scripture retrieval", async () => 
         return Response.json({ access_token: "test-token", expires_in: 300 });
       }
       if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
-        return Response.json({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  theme: "listen",
-                  temperature: "Low heat",
-                  underlyingNeed: "To",
-                  risk: { level: "none", category: "none" },
-                }),
-              },
-            },
-          ],
+        return toolCompletion("submit_selah_assessment", {
+          theme: "listen",
+          temperature: "Low heat",
+          underlyingNeed: "To",
+          risk: { level: "none", category: "none" },
         });
       }
       throw new Error(`Unexpected upstream call: ${url}`);
