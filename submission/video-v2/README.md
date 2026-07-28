@@ -37,7 +37,19 @@ the whole video carries **PREVIEW · NOT FOR SUBMISSION**. The output is:
 
 ## Render the final
 
-1. Capture the seven files described in `clips/README.md`.
+1. Capture the seven files described in `clips/README.md`. On macOS with
+   Google Chrome and FFmpeg installed, the checked-in production recorder can
+   reproduce them:
+
+```bash
+node submission/video-v2/capture-production.mjs
+```
+
+   Set `SELAH_PRODUCTION_URL` or `CHROME_PATH` only when the defaults do not
+   match your environment. The recorder drives the public UI, records visible
+   cursor movement and real clicks, trims provider waiting time outside the
+   submitted shots, and verifies every output as 1920×1080 video.
+
 2. Verify the production Gloo → YouVersion → Gloo path and the safety stop.
 3. Copy `evidence/verified.example.env` to `evidence/verified.env`, set both
    verification flags to `yes`, and record the verification time and evidence
