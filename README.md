@@ -9,8 +9,6 @@ composer. Rather than writing for the user or posting a verse at someone else,
 Selah retrieves a relevant passage and its wider context, asks one private
 question, and returns the final language and decision to the user.
 
-**Public demo:** <https://selah-before-send.aviadcoh.chatgpt.site>
-
 The prototype supports three outcomes:
 
 - **Edit in my own words** preserves the user's point while offering three
@@ -22,13 +20,18 @@ The prototype supports three outcomes:
 
 ## Status
 
-The full interaction and exact-sample curated-preview path are implemented.
-The live orchestration path is present in the server route but requires
-registered Gloo AI Studio and YouVersion Platform credentials plus an
-end-to-end validation run. Without those credentials, only the pinned sample
-can receive a preview; all novel drafts fail closed. Until live validation is
-complete, the deployed experience must not be described as using live API
-responses.
+The full interaction, exact-sample curated preview, and live orchestration path
+are implemented. [Production v4 is public and requires no
+login](https://selah-before-send.aviadcoh.chatgpt.site); it was built from
+source commit `f63ab0b175d08f8450d8acbe89071a5e79271c74`.
+
+At `2026-07-28T18:16:16.500Z`, the redacted production validator passed all
+three paths: a completed live Gloo → YouVersion → Gloo response with
+provenance, a deterministic safety stop with zero provider stages attempted,
+and an authenticated synthetic provider failure that returned no generated
+output. The public-safe result is recorded in
+`submission/production-validation-redacted.json`. Without credentials, a local
+deployment can replay only the pinned sample; novel drafts fail closed.
 
 No user study has been run. This repository demonstrates the product concept
 and technical pipeline, not measured behavior change.
@@ -61,20 +64,22 @@ user chooses: edit / pause / send anyway
 
 ### 1. Assess without diagnosing
 
-The first Gloo request returns a fixed JSON contract: conversation
-temperature, a charitable description of the underlying need, and one of five
-allowed themes (`listen`, `gentleness`, `repair`, `judgment`, or `burden`). It
-also returns a bounded semantic risk level and category. Any validated risk
-other than `none` stops the pipeline before passage retrieval or reflection.
-The prompt forbids diagnosis, protected-attribute inference, blame, preaching,
-and Scripture quotation.
+The first Gloo request must call a structured assessment tool whose schema
+contains conversation temperature, a charitable description of the underlying
+need, and one of five allowed themes (`listen`, `gentleness`, `repair`,
+`judgment`, or `burden`). It also returns a bounded semantic risk level and
+category. Any validated risk other than `none` stops the pipeline before
+passage retrieval or reflection. The prompt forbids diagnosis,
+protected-attribute inference, blame, preaching, and Scripture quotation.
 
 ### 2. Retrieve, never invent
 
 Each theme maps to a curated passage identifier. The YouVersion Platform path
 retrieves the focused text, a wider context range, Bible metadata, and
-attribution. The passage set is pinned to the Berean Standard Bible (BSB). The
-application does not ask a language model to generate Biblical text.
+attribution. Live responses also carry exact, machine-checkable provenance:
+the provider name, Bible ID, version, focus passage ID, and context passage ID.
+The passage set is pinned to the Berean Standard Bible (BSB). The application
+does not ask a language model to generate Biblical text.
 
 ### 3. Reflect, never replace
 
@@ -107,6 +112,10 @@ Scripture outside the supplied text.
 - Gloo access tokens are cached in worker memory until shortly before expiry;
   no token is sent to the browser.
 - API responses are marked `no-store`.
+- Responses include a redacted pipeline audit with provider-stage
+  attempted/completed booleans. It contains no credentials or user text. For a
+  deterministic safety stop, all provider stages are `false`; regression tests
+  separately assert that the network function was never called.
 - The application has no database, account system, analytics, or message
   persistence. The live quota guard temporarily counts requests by the
   Cloudflare-provided client address within a worker instance.
@@ -141,6 +150,17 @@ npm ci
 npm run dev
 ```
 
+To regenerate and execute the public audit notebook:
+
+```bash
+python3 -m pip install -r submission/requirements-notebook.txt
+python3 submission/build_notebook.py
+```
+
+The notebook dependency is pinned to the version used for the checked-in
+artifact. Its cells are executed top to bottom and validated before the file is
+written.
+
 For the live path, copy `.env.example` to an ignored local environment file and
 configure these server-side variables:
 
@@ -152,6 +172,13 @@ YVP_APP_KEY
 
 Never expose those values in client code or commit them to the repository.
 
+For the optional redacted production fault-injection check, also configure a
+random 32+ character server-only `SELAH_VALIDATION_SECRET`. The validator uses
+it to HMAC-sign a one-minute request; the secret itself is never transmitted.
+The authenticated scenario simulates a provider adapter failure before any
+network request and verifies the normal fail-closed response path. It cannot
+change data, reveal credentials, or generate a reflection.
+
 ## Verification
 
 ```bash
@@ -162,17 +189,30 @@ npm test
 
 `npm test` builds the vinext/Cloudflare worker and verifies the server-rendered
 surface, deterministic safety floor, exact-sample preview, and fail-closed
-behavior for novel drafts. A credentialed end-to-end test of both external
-APIs and the semantic safety stop remains required before the live integration
-claim is submission-ready.
+behavior for novel drafts. The current suite contains 15 tests.
+
+Production v4 passed the redacted validator at
+`2026-07-28T18:16:16.500Z`. To repeat that validation from a trusted shell:
+
+```bash
+SELAH_VALIDATION_SECRET='the-server-side-validation-secret' \
+  npm run validate:production -- \
+  --base-url 'https://your-deployed-site.example'
+```
+
+It makes three synthetic requests: a successful live reflection, a
+deterministic safety stop, and an HMAC-authenticated synthetic provider
+failure. Its JSON output includes only statuses, provenance identifiers, and
+pipeline stage booleans; it intentionally omits request text, Scripture text,
+reflection text, signatures, and credentials. The checked-in redacted result
+also records the deployed site version and exact source commit.
 
 ## Scope and next steps
 
 This build uses a simulated social conversation and a fixed sample post. It is
 not yet a browser extension or platform integration. The next evidence
-milestone is a credentialed API run with captured provenance, followed by
-safety review and small, consent-based usability testing before any real
-posting integration.
+milestone is safety review and small, consent-based usability testing before
+any real posting integration.
 
 ## Competition package
 
@@ -181,10 +221,11 @@ The `submission/` directory contains:
 - the final, sub-500-word Kaggle writeup;
 - a timed, sub-three-minute video script and shot list;
 - an executed, public-ready notebook with 57 deterministic checks/cases;
-- the notebook generator; and
+- the notebook generator and pinned Python requirement;
+- a public-safe redacted production-validation result; and
 - a truth-gated delivery checklist.
 
-The landscape cover image is `public/og.png`.
+The landscape cover image is `public/og-editorial.png`.
 
 ## License
 

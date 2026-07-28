@@ -35,10 +35,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: "/og.png",
-          width: 1730,
+          url: "/og-editorial.png",
+          width: 1731,
           height: 909,
-          alt: "Selah Before Send — Before it leaves your hands.",
+          alt: "Selah Before Send — Before your words leave your hands.",
         },
       ],
     },
@@ -46,7 +46,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      images: ["/og.png"],
+      images: ["/og-editorial.png"],
     },
   };
 }

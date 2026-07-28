@@ -1,0 +1,8 @@
+# Reproducible graphics and render intermediates.
+/assets/
+/work/
+/rendered/
+
+# Real recordings and validation state are local-only evidence.
+/clips/*.mp4
+/evidence/verified.env
