@@ -27,14 +27,14 @@ Jerusalem: **August 1, 2026 at 07:59 IDT**
 
 ## Identity/terms gates — entrant must complete
 
-- [ ] Join and accept the official Kaggle competition rules:
+- [x] Join and accept the official Kaggle competition rules:
   <https://www.kaggle.com/competitions/scripture-in-new-frontiers/rules>
 - [x] Register the YouVersion application and accept its applicable terms:
   <https://platform.youversion.com/summer-virtual-challenge-2026>
 - [x] Register for Gloo AI Studio challenge credentials:
   <https://studio.ai.gloo.com/challenge>
-- [ ] Re-authenticate GitHub CLI before publishing the public repository:
-  `gh auth login -h github.com`
+- [x] Publish the repository through authenticated Git access:
+  <https://github.com/aviad12g/selah-before-send>
 
 Never paste credential values into chat, source, a notebook, or Kaggle. Store
 them only as deployment secrets named `GLOO_CLIENT_ID`,
@@ -57,17 +57,19 @@ them only as deployment secrets named `GLOO_CLIENT_ID`,
 
 - [x] Make the working demo public and no-login:
   <https://selah-before-send.aviadcoh.chatgpt.site>
-- [ ] Publish the source repository.
-- [ ] Import `selah-before-send-audit.ipynb` into public Project Files.
-- [ ] Attach `production-validation-redacted.json` beside the notebook.
-- [ ] Upload `public/og-editorial.png` as the cover/media-gallery image.
-- [ ] Record the product in one uninterrupted sequence using
-  `video-script-and-shot-list.md`.
-- [ ] Upload the final video publicly to YouTube; keep it under three minutes
-  and enable captions.
-- [ ] Submit `kaggle-writeup.md` as the final writeup, not a draft.
-- [ ] Add the public demo, repository, notebook, and YouTube links.
-- [ ] Re-read the rendered entry and submit before the deadline.
+- [x] Publish the source repository.
+- [x] Attach `selah-before-send-audit.ipynb` as a public Project File.
+- [x] Attach `production-validation-redacted.json` beside the notebook.
+- [x] Upload `public/og-editorial.png` as the cover/media-gallery image.
+- [x] Capture genuine production interactions with visible clicks and no mocked
+  application state.
+- [x] Upload the 86-second final video publicly to YouTube at 1080p with the
+  verified English caption track:
+  <https://www.youtube.com/watch?v=G0j-cC6ewFY>
+- [x] Submit `kaggle-writeup.md` as the final writeup, not a draft.
+- [x] Add the public demo, repository, notebook evidence, and final video.
+- [x] Re-read the rendered entry and submit before the deadline:
+  <https://www.kaggle.com/competitions/scripture-in-new-frontiers/writeups/selah-before-send>
 
 ## Truth gate for the final entry
 
