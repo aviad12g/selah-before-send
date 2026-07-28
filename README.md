@@ -227,6 +227,12 @@ The `submission/` directory contains:
 
 The landscape cover image is `public/og-editorial.png`.
 
+The final competition materials are public:
+
+- [Kaggle writeup](https://www.kaggle.com/competitions/scripture-in-new-frontiers/writeups/selah-before-send)
+- [86-second live demo video](https://www.youtube.com/watch?v=G0j-cC6ewFY)
+- [No-login production prototype](https://selah-before-send.aviadcoh.chatgpt.site)
+
 ## License
 
 The application source is available under the [MIT License](LICENSE). The
