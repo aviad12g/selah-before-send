@@ -34,6 +34,23 @@ type Reflection = {
   threeMoves: [string, string, string];
 };
 
+type ProviderStageAudit = {
+  glooAssessment: boolean;
+  youVersion: boolean;
+  glooReflection: boolean;
+};
+
+type PipelineAudit = {
+  schemaVersion: 1;
+  decision:
+    | "blocked-deterministic"
+    | "blocked-semantic"
+    | "completed-live"
+    | "failed-closed";
+  providerStagesAttempted: ProviderStageAudit;
+  providerStagesCompleted: ProviderStageAudit;
+};
+
 const BIBLE_ID = 3034;
 const BIBLE_VERSION = "BSB";
 const BIBLE_COPYRIGHT =
@@ -48,6 +65,10 @@ const OVERALL_TIMEOUT_MS = 35_000;
 const RATE_LIMIT_MAX = 6;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1_000;
 const SUPPORT_URL = "https://findahelpline.com/";
+const VALIDATION_SCENARIO_HEADER = "x-selah-validation-scenario";
+const VALIDATION_TIMESTAMP_HEADER = "x-selah-validation-timestamp";
+const VALIDATION_SIGNATURE_HEADER = "x-selah-validation-signature";
+const VALIDATION_MAX_CLOCK_SKEW_MS = 60_000;
 
 let cachedGlooToken:
   | {
@@ -57,6 +78,25 @@ let cachedGlooToken:
   | undefined;
 
 const rateBuckets = new Map<string, { count: number; resetsAt: number }>();
+
+function createPipelineAudit(
+  decision: PipelineAudit["decision"] = "failed-closed",
+): PipelineAudit {
+  return {
+    schemaVersion: 1,
+    decision,
+    providerStagesAttempted: {
+      glooAssessment: false,
+      youVersion: false,
+      glooReflection: false,
+    },
+    providerStagesCompleted: {
+      glooAssessment: false,
+      youVersion: false,
+      glooReflection: false,
+    },
+  };
+}
 
 const passages: Record<
   ThemeKey,
@@ -234,11 +274,71 @@ function upstreamSignal(overallSignal: AbortSignal) {
   ]);
 }
 
+function fromHex(value: string) {
+  if (!/^[0-9a-f]{64}$/iu.test(value)) return null;
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+async function validationScenario(
+  request: Request,
+  post: string,
+  draft: string,
+) {
+  const scenario = request.headers.get(VALIDATION_SCENARIO_HEADER);
+  if (!scenario) return { scenario: null as null, authorized: true };
+  if (scenario !== "provider-failure") {
+    return { scenario: null as null, authorized: false };
+  }
+
+  const secret = process.env.SELAH_VALIDATION_SECRET;
+  const timestamp = request.headers.get(VALIDATION_TIMESTAMP_HEADER) ?? "";
+  const signature = fromHex(
+    request.headers.get(VALIDATION_SIGNATURE_HEADER) ?? "",
+  );
+  const timestampNumber = Number(timestamp);
+  if (
+    !secret ||
+    secret.length < 32 ||
+    !signature ||
+    !Number.isSafeInteger(timestampNumber) ||
+    Math.abs(Date.now() - timestampNumber) > VALIDATION_MAX_CLOCK_SKEW_MS
+  ) {
+    return { scenario: null as null, authorized: false };
+  }
+
+  const message = JSON.stringify({ timestamp, scenario, post, draft });
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const authorized = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    signature,
+    new TextEncoder().encode(message),
+  );
+  return {
+    scenario: authorized ? ("provider-failure" as const) : null,
+    authorized,
+  };
+}
+
 async function getGlooToken(
   clientId: string,
   clientSecret: string,
   overallSignal: AbortSignal,
+  simulateProviderFailure = false,
 ) {
+  if (simulateProviderFailure) {
+    throw new Error("Authenticated synthetic Gloo provider failure");
+  }
   if (cachedGlooToken && cachedGlooToken.expiresAt > Date.now() + 60_000) {
     return cachedGlooToken.value;
   }
@@ -452,6 +552,13 @@ async function fetchYouVersion(
     context: context.content,
     contextReference: context.reference,
     copyright,
+    provenance: {
+      provider: "YouVersion Platform" as const,
+      bibleId: BIBLE_ID,
+      bibleVersion: BIBLE_VERSION,
+      focusPassageId: selected.focus,
+      contextPassageId: selected.context,
+    },
   };
 }
 
@@ -571,13 +678,16 @@ function fixtureResponse() {
   };
 }
 
-function highRiskResponse() {
+function highRiskResponse(
+  audit: PipelineAudit = createPipelineAudit("blocked-deterministic"),
+) {
   return Response.json(
     {
       code: "HIGH_RISK",
       error:
         "Selah will not continue this reflection or advise whether to send because the language may signal self-harm, a threat, abuse, or immediate danger. If you or someone else may be in immediate danger, contact local emergency services. For confidential support, choose a verified helpline for your country.",
       supportUrl: SUPPORT_URL,
+      audit,
     },
     { status: 422, headers: NO_STORE_HEADERS },
   );
@@ -627,6 +737,17 @@ export async function POST(request: Request) {
     return highRiskResponse();
   }
 
+  const validation = await validationScenario(request, post, draft);
+  if (!validation.authorized) {
+    return Response.json(
+      {
+        code: "VALIDATION_UNAUTHORIZED",
+        error: "The production validation request was not authorized.",
+      },
+      { status: 401, headers: NO_STORE_HEADERS },
+    );
+  }
+
   const clientId = process.env.GLOO_CLIENT_ID;
   const clientSecret = process.env.GLOO_CLIENT_SECRET;
   const youVersionKey = process.env.YVP_APP_KEY;
@@ -661,24 +782,36 @@ export async function POST(request: Request) {
     );
   }
 
+  const audit = createPipelineAudit();
   try {
     const overallSignal = AbortSignal.timeout(OVERALL_TIMEOUT_MS);
-    const token = await getGlooToken(clientId, clientSecret, overallSignal);
+    audit.providerStagesAttempted.glooAssessment = true;
+    const token = await getGlooToken(
+      clientId,
+      clientSecret,
+      overallSignal,
+      validation.scenario === "provider-failure",
+    );
     const assessmentDecision = await assessDraft(
       token,
       post,
       draft,
       overallSignal,
     );
+    audit.providerStagesCompleted.glooAssessment = true;
     if (assessmentDecision.blocked) {
-      return highRiskResponse();
+      audit.decision = "blocked-semantic";
+      return highRiskResponse(audit);
     }
     const { assessment } = assessmentDecision;
+    audit.providerStagesAttempted.youVersion = true;
     const passage = await fetchYouVersion(
       assessment.theme,
       youVersionKey,
       overallSignal,
     );
+    audit.providerStagesCompleted.youVersion = true;
+    audit.providerStagesAttempted.glooReflection = true;
     const reflection = await reflect(
       token,
       post,
@@ -687,6 +820,8 @@ export async function POST(request: Request) {
       passage,
       overallSignal,
     );
+    audit.providerStagesCompleted.glooReflection = true;
+    audit.decision = "completed-live";
     return Response.json(
       {
         assessment,
@@ -696,18 +831,22 @@ export async function POST(request: Request) {
         },
         reflection,
         source: "live",
+        audit,
       },
       { headers: NO_STORE_HEADERS },
     );
   } catch (error) {
+    audit.decision = "failed-closed";
     console.error(
       "Selah orchestration failed",
       error instanceof Error ? error.message : "unknown error",
     );
     return Response.json(
       {
+        code: "UPSTREAM_UNAVAILABLE",
         error:
           "The private reflection could not be opened. No social post was created.",
+        audit,
       },
       { status: 502, headers: NO_STORE_HEADERS },
     );

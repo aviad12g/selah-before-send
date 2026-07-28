@@ -1,0 +1,104 @@
+1
+00:00:00,050 --> 00:00:04,348
+Mara writes, “If this mattered to you, you would have shown up.”
+
+2
+00:00:04,348 --> 00:00:08,697
+You fire back, “You have no idea what I was carrying.”
+
+3
+00:00:08,697 --> 00:00:10,325
+Your thumb reaches Send.
+
+4
+00:00:10,325 --> 00:00:13,046
+This is the second Selah is built for.
+
+5
+00:00:13,046 --> 00:00:16,041
+It isn’t another Bible app you have to remember to open.
+
+6
+00:00:16,041 --> 00:00:19,427
+It is a private pause, right where the argument is happening.
+
+7
+00:00:19,427 --> 00:00:20,703
+Tap Pause.
+
+8
+00:00:20,703 --> 00:00:23,945
+First, Gloo reads the heat—not who is right.
+
+9
+00:00:23,945 --> 00:00:27,630
+Here it sees defensiveness, and a need to be understood.
+
+10
+00:00:27,630 --> 00:00:30,091
+That selects an allowlisted theme.
+
+11
+00:00:30,091 --> 00:00:34,283
+YouVersion returns the exact passage and its wider context.
+
+12
+00:00:34,283 --> 00:00:37,330
+The model never chooses or invents Scripture.
+
+13
+00:00:37,330 --> 00:00:40,091
+Then Selah asks one private question.
+
+14
+00:00:40,091 --> 00:00:43,554
+It never writes the reply, and it never posts for you.
+
+15
+00:00:43,554 --> 00:00:45,273
+Edit in your own words.
+
+16
+00:00:45,273 --> 00:00:46,927
+Wait ten minutes.
+
+17
+00:00:46,927 --> 00:00:48,476
+Or send anyway.
+
+18
+00:00:48,476 --> 00:00:51,250
+Your voice—and your choice—stay yours.
+
+19
+00:00:51,250 --> 00:00:57,057
+And if the message is more than angry, Selah does not answer a crisis with a verse.
+
+20
+00:00:57,057 --> 00:00:58,255
+It stops.
+
+21
+00:00:58,255 --> 00:00:59,986
+No Scripture retrieval.
+
+22
+00:00:59,986 --> 00:01:01,406
+No reflection.
+
+23
+00:01:01,406 --> 00:01:03,867
+It points toward immediate human help.
+
+24
+00:01:03,867 --> 00:01:15,195
+Underneath, every stage is bounded, schema-checked, and fail-closed: Gloo classifies, YouVersion retrieves, and Gloo reflects using only the returned text.
+
+25
+00:01:15,195 --> 00:01:18,151
+Selah doesn’t ask technology to speak for you.
+
+26
+00:01:18,151 --> 00:01:23,815
+It gives you one quiet moment to decide who you want to be—before your words leave your hands.
+

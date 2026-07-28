@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 
 const SAMPLE_POST =
@@ -61,6 +62,17 @@ async function withLiveCredentials(fetchImplementation, callback) {
   }
 }
 
+async function withValidationSecret(secret, callback) {
+  const original = process.env.SELAH_VALIDATION_SECRET;
+  process.env.SELAH_VALIDATION_SECRET = secret;
+  try {
+    return await callback();
+  } finally {
+    if (original === undefined) delete process.env.SELAH_VALIDATION_SECRET;
+    else process.env.SELAH_VALIDATION_SECRET = original;
+  }
+}
+
 test("server-renders the Selah experience", async () => {
   const response = await render();
   assert.equal(response.status, 200);
@@ -107,6 +119,360 @@ test("returns the labeled deterministic preview without credentials", async () =
   assert.deepEqual(payload.assessment.risk, {
     level: "none",
     category: "none",
+  });
+});
+
+test("returns exact YouVersion provenance and a completed live audit", async () => {
+  const upstreamCalls = [];
+  let completionCount = 0;
+
+  await withLiveCredentials(
+    async (input) => {
+      const url = String(input);
+      upstreamCalls.push(url);
+      if (url === "https://platform.ai.gloo.com/oauth2/token") {
+        return Response.json({ access_token: "test-token", expires_in: 300 });
+      }
+      if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
+        completionCount += 1;
+        if (completionCount === 1) {
+          return Response.json({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    theme: "listen",
+                    temperature: "Rising heat",
+                    underlyingNeed: "To be heard before deciding",
+                    risk: { level: "none", category: "none" },
+                  }),
+                },
+              },
+            ],
+          });
+        }
+        return Response.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  question: "What can you acknowledge before making your request?",
+                  editPrompt:
+                    "Keep your point, name what you heard, then ask for one next step.",
+                  threeMoves: [
+                    "Name what you heard",
+                    "State your concern",
+                    "Ask one clear question",
+                  ],
+                }),
+              },
+            },
+          ],
+        });
+      }
+      if (
+        url ===
+        "https://api.youversion.com/v1/bibles/3034/passages/JAS.1.19-20?format=text"
+      ) {
+        return Response.json({
+          data: {
+            content: "Be quick to listen, slow to speak, and slow to anger.",
+            reference: "James 1:19–20",
+          },
+        });
+      }
+      if (
+        url ===
+        "https://api.youversion.com/v1/bibles/3034/passages/JAS.1.19-25?format=text"
+      ) {
+        return Response.json({
+          data: {
+            content:
+              "Be quick to listen, slow to speak, and slow to anger. Continue as a doer of the word.",
+            reference: "James 1:19–25",
+          },
+        });
+      }
+      if (url === "https://api.youversion.com/v1/bibles/3034") {
+        return Response.json({
+          data: { copyright: "Test BSB attribution." },
+        });
+      }
+      throw new Error(`Unexpected upstream call: ${url}`);
+    },
+    async () => {
+      const response = await dispatch(
+        new Request("http://localhost/api/selah", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "cf-connecting-ip": "live-provenance-test",
+          },
+          body: JSON.stringify({
+            post: "A teammate asked for a clear update on the plan.",
+            draft:
+              "I am frustrated by the change, but I want to answer carefully and propose one next step.",
+          }),
+        }),
+      );
+
+      assert.equal(response.status, 200);
+      const payload = await response.json();
+      assert.equal(payload.source, "live");
+      assert.deepEqual(payload.passage.provenance, {
+        provider: "YouVersion Platform",
+        bibleId: 3034,
+        bibleVersion: "BSB",
+        focusPassageId: "JAS.1.19-20",
+        contextPassageId: "JAS.1.19-25",
+      });
+      assert.deepEqual(payload.audit, {
+        schemaVersion: 1,
+        decision: "completed-live",
+        providerStagesAttempted: {
+          glooAssessment: true,
+          youVersion: true,
+          glooReflection: true,
+        },
+        providerStagesCompleted: {
+          glooAssessment: true,
+          youVersion: true,
+          glooReflection: true,
+        },
+      });
+      assert.equal(
+        upstreamCalls.filter((url) =>
+          url.includes("platform.ai.gloo.com/ai/v2/chat/completions"),
+        ).length,
+        2,
+      );
+      assert.equal(
+        upstreamCalls.filter((url) => url.includes("api.youversion.com")).length,
+        3,
+      );
+    },
+  );
+});
+
+test("proves a deterministic safety stop makes zero provider calls", async () => {
+  const upstreamCalls = [];
+
+  await withLiveCredentials(
+    async (input) => {
+      upstreamCalls.push(String(input));
+      throw new Error("No provider call is allowed for deterministic safety");
+    },
+    async () => {
+      const response = await dispatch(
+        new Request("http://localhost/api/selah", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "cf-connecting-ip": "zero-provider-test",
+          },
+          body: JSON.stringify({
+            post: "A fictional character wrote an emotional public reply.",
+            draft: "I want to kill myself.",
+          }),
+        }),
+      );
+
+      assert.equal(response.status, 422);
+      const payload = await response.json();
+      assert.equal(payload.code, "HIGH_RISK");
+      assert.deepEqual(payload.audit, {
+        schemaVersion: 1,
+        decision: "blocked-deterministic",
+        providerStagesAttempted: {
+          glooAssessment: false,
+          youVersion: false,
+          glooReflection: false,
+        },
+        providerStagesCompleted: {
+          glooAssessment: false,
+          youVersion: false,
+          glooReflection: false,
+        },
+      });
+      assert.deepEqual(upstreamCalls, []);
+    },
+  );
+});
+
+test("fails closed when a real provider adapter returns an error", async () => {
+  const upstreamCalls = [];
+
+  await withLiveCredentials(
+    async (input) => {
+      const url = String(input);
+      upstreamCalls.push(url);
+      if (url === "https://platform.ai.gloo.com/oauth2/token") {
+        return Response.json({ access_token: "test-token", expires_in: 300 });
+      }
+      if (url === "https://platform.ai.gloo.com/ai/v2/chat/completions") {
+        return Response.json({ error: "synthetic provider outage" }, { status: 503 });
+      }
+      throw new Error(`No downstream call was expected: ${url}`);
+    },
+    async () => {
+      const originalConsoleError = console.error;
+      console.error = () => {};
+      let response;
+      try {
+        response = await dispatch(
+          new Request("http://localhost/api/selah", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "cf-connecting-ip": "provider-failure-test",
+            },
+            body: JSON.stringify({
+              post: "A teammate asked for a clear update on the plan.",
+              draft:
+                "I disagree with the change, but I want to reply carefully and keep the next step clear.",
+            }),
+          }),
+        );
+      } finally {
+        console.error = originalConsoleError;
+      }
+
+      assert.equal(response.status, 502);
+      const payload = await response.json();
+      assert.equal(payload.code, "UPSTREAM_UNAVAILABLE");
+      assert.equal(payload.source, undefined);
+      assert.equal(payload.passage, undefined);
+      assert.equal(payload.reflection, undefined);
+      assert.deepEqual(payload.audit, {
+        schemaVersion: 1,
+        decision: "failed-closed",
+        providerStagesAttempted: {
+          glooAssessment: true,
+          youVersion: false,
+          glooReflection: false,
+        },
+        providerStagesCompleted: {
+          glooAssessment: false,
+          youVersion: false,
+          glooReflection: false,
+        },
+      });
+      assert.ok(
+        upstreamCalls.some((url) =>
+          url.includes("platform.ai.gloo.com/ai/v2/chat/completions"),
+        ),
+      );
+      assert.equal(
+        upstreamCalls.some((url) => url.includes("api.youversion.com")),
+        false,
+      );
+    },
+  );
+});
+
+test("accepts an HMAC-authenticated production fault without sending the secret", async () => {
+  const upstreamCalls = [];
+  const secret = "test-only-validation-secret-32-characters-long";
+  const timestamp = String(Date.now());
+  const scenario = "provider-failure";
+  const post = "A teammate asked for a reply after reviewing the updated plan.";
+  const draft =
+    "I disagree with the change, but I want to respond carefully and keep the next step clear.";
+  const signature = createHmac("sha256", secret)
+    .update(JSON.stringify({ timestamp, scenario, post, draft }))
+    .digest("hex");
+
+  await withValidationSecret(secret, async () => {
+    await withLiveCredentials(
+      async (input) => {
+        upstreamCalls.push(String(input));
+        throw new Error("Authenticated synthetic failure must not call a provider");
+      },
+      async () => {
+        const originalConsoleError = console.error;
+        console.error = () => {};
+        let response;
+        try {
+          response = await dispatch(
+            new Request("http://localhost/api/selah", {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "cf-connecting-ip": "signed-fault-test",
+                "x-selah-validation-scenario": scenario,
+                "x-selah-validation-timestamp": timestamp,
+                "x-selah-validation-signature": signature,
+              },
+              body: JSON.stringify({ post, draft }),
+            }),
+          );
+        } finally {
+          console.error = originalConsoleError;
+        }
+
+        assert.equal(response.status, 502);
+        const payload = await response.json();
+        assert.equal(payload.code, "UPSTREAM_UNAVAILABLE");
+        assert.equal(payload.source, undefined);
+        assert.equal(payload.passage, undefined);
+        assert.equal(payload.reflection, undefined);
+        assert.deepEqual(payload.audit, {
+          schemaVersion: 1,
+          decision: "failed-closed",
+          providerStagesAttempted: {
+            glooAssessment: true,
+            youVersion: false,
+            glooReflection: false,
+          },
+          providerStagesCompleted: {
+            glooAssessment: false,
+            youVersion: false,
+            glooReflection: false,
+          },
+        });
+        assert.deepEqual(upstreamCalls, []);
+      },
+    );
+  });
+});
+
+test("rejects an invalid production fault signature before any provider call", async () => {
+  const upstreamCalls = [];
+  const secret = "test-only-validation-secret-32-characters-long";
+
+  await withValidationSecret(secret, async () => {
+    await withLiveCredentials(
+      async (input) => {
+        upstreamCalls.push(String(input));
+        throw new Error("An unauthorized request must not call a provider");
+      },
+      async () => {
+        const response = await dispatch(
+          new Request("http://localhost/api/selah", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "cf-connecting-ip": "invalid-signature-test",
+              "x-selah-validation-scenario": "provider-failure",
+              "x-selah-validation-timestamp": String(Date.now()),
+              "x-selah-validation-signature": "0".repeat(64),
+            },
+            body: JSON.stringify({
+              post: "A teammate asked for a reply after reviewing the plan.",
+              draft:
+                "I disagree with the change, but I want to reply carefully and keep the next step clear.",
+            }),
+          }),
+        );
+
+        assert.equal(response.status, 401);
+        assert.deepEqual(await response.json(), {
+          code: "VALIDATION_UNAUTHORIZED",
+          error: "The production validation request was not authorized.",
+        });
+        assert.deepEqual(upstreamCalls, []);
+      },
+    );
   });
 });
 

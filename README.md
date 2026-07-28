@@ -71,8 +71,10 @@ and Scripture quotation.
 
 Each theme maps to a curated passage identifier. The YouVersion Platform path
 retrieves the focused text, a wider context range, Bible metadata, and
-attribution. The passage set is pinned to the Berean Standard Bible (BSB). The
-application does not ask a language model to generate Biblical text.
+attribution. Live responses also carry exact, machine-checkable provenance:
+the provider name, Bible ID, version, focus passage ID, and context passage ID.
+The passage set is pinned to the Berean Standard Bible (BSB). The application
+does not ask a language model to generate Biblical text.
 
 ### 3. Reflect, never replace
 
@@ -105,6 +107,10 @@ Scripture outside the supplied text.
 - Gloo access tokens are cached in worker memory until shortly before expiry;
   no token is sent to the browser.
 - API responses are marked `no-store`.
+- Responses include a redacted pipeline audit with provider-stage
+  attempted/completed booleans. It contains no credentials or user text. For a
+  deterministic safety stop, all provider stages are `false`; regression tests
+  separately assert that the network function was never called.
 - The application has no database, account system, analytics, or message
   persistence. The live quota guard temporarily counts requests by the
   Cloudflare-provided client address within a worker instance.
@@ -150,6 +156,13 @@ YVP_APP_KEY
 
 Never expose those values in client code or commit them to the repository.
 
+For the optional redacted production fault-injection check, also configure a
+random 32+ character server-only `SELAH_VALIDATION_SECRET`. The validator uses
+it to HMAC-sign a one-minute request; the secret itself is never transmitted.
+The authenticated scenario simulates a provider adapter failure before any
+network request and verifies the normal fail-closed response path. It cannot
+change data, reveal credentials, or generate a reflection.
+
 ## Verification
 
 ```bash
@@ -163,6 +176,20 @@ surface, deterministic safety floor, exact-sample preview, and fail-closed
 behavior for novel drafts. A credentialed end-to-end test of both external
 APIs and the semantic safety stop remains required before the live integration
 claim is submission-ready.
+
+After deployment, run the redacted production validator from a trusted shell:
+
+```bash
+SELAH_VALIDATION_SECRET='the-server-side-validation-secret' \
+  npm run validate:production -- \
+  --base-url 'https://your-deployed-site.example'
+```
+
+It makes three synthetic requests: a successful live reflection, a
+deterministic safety stop, and an HMAC-authenticated synthetic provider
+failure. Its JSON output includes only statuses, provenance identifiers, and
+pipeline stage booleans; it intentionally omits request text, Scripture text,
+reflection text, signatures, and credentials.
 
 ## Scope and next steps
 
