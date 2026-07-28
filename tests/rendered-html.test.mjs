@@ -83,15 +83,20 @@ test("server-renders the Selah experience", async () => {
     html,
     /<title>Selah Before Send — A pause inside the conversation<\/title>/i,
   );
-  assert.match(html, /SELAH \/ BEFORE SEND/);
-  assert.match(html, /Before it leaves/);
+  assert.match(html, /aria-label="Selah Before Send home"/);
+  assert.match(html, /Before your words leave/);
+  assert.match(html, /Mara wrote/);
+  assert.match(
+    html,
+    /If this mattered to you, you would have shown up\. Stop calling it complicated\./,
+  );
   assert.match(html, /Pause before sending/);
   assert.match(html, /YouVersion Platform/);
   assert.match(html, /Gloo AI Studio/);
   assert.match(html, /In live mode, pausing sends this post and draft to Gloo/);
   assert.match(
     html,
-    /property="og:image" content="http:\/\/localhost(?::3000)?\/og\.png"/,
+    /property="og:image" content="http:\/\/localhost(?::3000)?\/og-editorial\.png"/,
   );
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });

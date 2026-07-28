@@ -1,0 +1,22 @@
+{
+  "voice": "en-US-AvaNeural",
+  "duration_seconds": 87.198,
+  "integrated_lufs": -16.2,
+  "true_peak_dbfs": -1.8,
+  "thought_groups": 8,
+  "synthesis_segments": 10,
+  "rates": [
+    "-4%",
+    "+3%",
+    "-9%",
+    "+1%",
+    "-2%",
+    "-5%",
+    "-9%",
+    "-5%",
+    "+3%",
+    "-5%"
+  ],
+  "intentional_silence_seconds": 5.43,
+  "caption_cues": 26
+}

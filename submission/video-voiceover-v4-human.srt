@@ -1,0 +1,103 @@
+1
+00:00:00,100 --> 00:00:06,586
+Hi. This is Selah Before Send—a private pause before a message leaves your hands.
+
+2
+00:00:06,586 --> 00:00:08,826
+Here is the moment it was built for.
+
+3
+00:00:09,676 --> 00:00:13,365
+A friend writes, “If this mattered to you, you would have shown up.”
+
+4
+00:00:13,366 --> 00:00:16,458
+You fire back, “You have no idea what I was carrying.”
+
+5
+00:00:16,458 --> 00:00:18,339
+Your cursor reaches Send.
+
+6
+00:00:18,936 --> 00:00:20,227
+Tap Pause.
+
+7
+00:00:21,532 --> 00:00:24,725
+First, Gloo reads the heat—not who is right.
+
+8
+00:00:24,726 --> 00:00:27,905
+Here it sees defensiveness, and a need to be understood.
+
+9
+00:00:27,905 --> 00:00:30,046
+That selects a pre-approved theme.
+
+10
+00:00:30,046 --> 00:00:34,180
+YouVersion returns the exact passage and its wider context.
+
+11
+00:00:34,180 --> 00:00:37,014
+The model never chooses or invents Scripture.
+
+12
+00:00:37,664 --> 00:00:40,508
+Then Selah asks one private question.
+
+13
+00:00:40,509 --> 00:00:43,927
+It never writes the reply, and it never posts for you.
+
+14
+00:00:43,927 --> 00:00:45,841
+Edit in your own words.
+
+15
+00:00:45,841 --> 00:00:47,333
+Wait ten minutes.
+
+16
+00:00:47,333 --> 00:00:48,685
+Or send anyway.
+
+17
+00:00:48,685 --> 00:00:51,389
+Your voice—and your choice—stay yours.
+
+18
+00:00:52,116 --> 00:00:57,997
+And if the message is more than angry, Selah does not answer a crisis with a verse.
+
+19
+00:00:58,368 --> 00:00:59,727
+It stops.
+
+20
+00:01:00,334 --> 00:01:02,202
+No Scripture retrieval.
+
+21
+00:01:02,203 --> 00:01:03,612
+No reflection.
+
+22
+00:01:03,612 --> 00:01:06,323
+It points toward immediate human help.
+
+23
+00:01:07,190 --> 00:01:12,663
+Every step has a fixed structure, and if anything fails, the system stops safely.
+
+24
+00:01:12,664 --> 00:01:18,038
+Gloo classifies, YouVersion retrieves, and Gloo reflects using only the returned text.
+
+25
+00:01:18,754 --> 00:01:21,859
+Selah doesn’t ask technology to speak for you.
+
+26
+00:01:21,860 --> 00:01:27,190
+It gives you one quiet moment to decide who you want to be—before your words leave your hands.

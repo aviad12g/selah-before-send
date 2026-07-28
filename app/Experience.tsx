@@ -51,6 +51,8 @@ export function Experience() {
   const [heldUntil, setHeldUntil] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(10 * 60);
   const panelRef = useRef<HTMLElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const outcomeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (phase !== "pause") return;
@@ -69,6 +71,12 @@ export function Experience() {
     const interval = window.setInterval(update, 1_000);
     return () => window.clearInterval(interval);
   }, [heldUntil, phase]);
+
+  useEffect(() => {
+    if (phase !== "held" && phase !== "sent") return;
+    const frame = requestAnimationFrame(() => outcomeRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
 
   async function pauseBeforeSend(event: FormEvent) {
     event.preventDefault();
@@ -112,6 +120,16 @@ export function Experience() {
   function editInOwnWords() {
     setPhase("editing");
     setShowContext(false);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    });
+  }
+
+  function closePause() {
+    setPhase("compose");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    });
   }
 
   function holdDraft() {
@@ -141,322 +159,369 @@ export function Experience() {
 
   return (
     <main className="app-shell">
-      <div className="grain" aria-hidden="true" />
       <header className="site-header">
         <Link className="wordmark" href="/" aria-label="Selah Before Send home">
           <span className="wordmark-mark" aria-hidden="true">
-            ||
+            II
           </span>
-          <span>SELAH / BEFORE SEND</span>
+          <span>
+            SELAH
+            <i>before send</i>
+          </span>
         </Link>
         <div className="header-note">
           <span className="pulse" aria-hidden="true" />
-          private-facing · never auto-posts
+          <span>Private by design</span>
+          <b>Never auto-posts</b>
         </div>
       </header>
 
-      <section className="product-intro">
-        <div className="eyebrow">
-          <span>01</span>
-          <span>A pause inside the conversation</span>
+      <section className="opening" aria-labelledby="opening-title">
+        <div className="opening-copy">
+          <div className="eyebrow">
+            <span>IN THE MOMENT</span>
+            <span>The second before send</span>
+          </div>
+          <h1 id="opening-title">
+            Before your words leave <em>your hands.</em>
+          </h1>
+          <p className="opening-lede">
+            Selah opens one private pause inside a heated conversation.
+            Scripture offers perspective; it never writes the reply.
+          </p>
+          <dl className="opening-trust">
+            <div>
+              <dt>Voice</dt>
+              <dd>Always yours</dd>
+            </div>
+            <div>
+              <dt>Scripture</dt>
+              <dd>Exact, sourced text</dd>
+            </div>
+            <div>
+              <dt>Posting</dt>
+              <dd>Only by your choice</dd>
+            </div>
+          </dl>
         </div>
-        <h1>
-          Before it leaves
-          <br />
-          <em>your hands.</em>
-        </h1>
-        <p>
-          Selah meets you where conflict already happens. It never inserts
-          model-written text into your reply or posts a verse. It creates one
-          private-facing beat to listen, reflect, and choose again.
-        </p>
-      </section>
 
-      <section className="demo-shell" aria-label="Selah social reply prototype">
-        <div className="social-window">
-          <div className="window-bar">
-            <div className="window-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
+        <section className="demo-shell" aria-label="Selah social reply prototype">
+          <div className="social-window">
+            <div className="conversation-heading">
+              <div>
+                <span>DIRECT THREAD</span>
+                <strong>Mara Chen</strong>
+              </div>
+              <span className="thread-time">2 minutes ago</span>
+              <div className="selah-status">
+                <b aria-hidden="true">II</b>
+                Selah ready
+              </div>
             </div>
-            <span>Conversation</span>
-            <div className="selah-status">
-              <b aria-hidden="true">S</b>
-              Selah on
-            </div>
+
+            <article className="post-card">
+              <div className="message-origin">
+                <div className="avatar" aria-hidden="true">
+                  M
+                </div>
+                <div className="post-meta">
+                  <strong>Mara wrote</strong>
+                  <span>@marach</span>
+                </div>
+              </div>
+              <div className="post-body">
+                <p>{samplePost}</p>
+              </div>
+              <span className="message-temperature" aria-label="Conversation tension is rising">
+                tension rising
+              </span>
+            </article>
+
+            {composerOpen ? (
+              <form
+                className="reply-composer"
+                onSubmit={pauseBeforeSend}
+                aria-busy={phase === "loading"}
+              >
+                <div className="composer-body">
+                  <div className="draft-heading">
+                    <label htmlFor="reply">Your reply</label>
+                    <span>unsent · editable</span>
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    id="reply"
+                    value={draft}
+                    rows={5}
+                    maxLength={500}
+                    aria-describedby="draft-help draft-count"
+                    onChange={(event) => setDraft(event.target.value)}
+                    disabled={phase === "loading"}
+                  />
+                  {phase === "loading" ? (
+                    <span className="sr-only" role="status">
+                      Selah is opening a private reflection. Nothing has been posted.
+                    </span>
+                  ) : null}
+                  <p className="draft-help" id="draft-help">
+                    Keep your voice. The pause only helps you decide what it should carry.
+                  </p>
+
+                  {phase === "editing" && result ? (
+                    <div className="edit-coach" role="note">
+                      <span>KEEP IT YOURS</span>
+                      <p>{result.reflection.editPrompt}</p>
+                      <ol>
+                        {result.reflection.threeMoves.map((move) => (
+                          <li key={move}>{move}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  ) : null}
+
+                  <details className="processing-note">
+                    <summary>What happens when I pause?</summary>
+                    <p>
+                      In live mode, pausing sends this post and draft to Gloo AI
+                      Studio for processing under its{" "}
+                      <a
+                        href="https://gloo.com/legal/ai-studio-supplemental-terms-of-service"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        provider terms
+                      </a>
+                      . Without live credentials, only the supplied sample can
+                      replay the labeled preview; edited drafts receive no
+                      reflection. Selah never posts to the social network.
+                    </p>
+                  </details>
+
+                  <div className="composer-actions">
+                    <span id="draft-count" aria-live="polite">
+                      {draft.length} / 500
+                    </span>
+                    <button
+                      className="quiet-button"
+                      type="button"
+                      onClick={sendAnyway}
+                      disabled={phase === "loading"}
+                    >
+                      {safetyStopped ? "Send without Selah" : "Send without pause"}
+                    </button>
+                    <button
+                      className="primary-button"
+                      type="submit"
+                      disabled={phase === "loading"}
+                    >
+                      <span>
+                        {phase === "loading"
+                          ? "Opening Selah"
+                          : safetyStopped
+                            ? "Recheck this draft"
+                            : "Pause before sending"}
+                      </span>
+                      <span aria-hidden="true">{phase === "loading" ? "•••" : "II"}</span>
+                    </button>
+                  </div>
+                  {error ? (
+                    <div className="form-error" role="alert">
+                      <p>{error}</p>
+                      {supportUrl ? (
+                        <a href={supportUrl} target="_blank" rel="noreferrer">
+                          Find a verified helpline in your country
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </form>
+            ) : null}
+
+            {phase === "held" ? (
+              <div
+                ref={outcomeRef}
+                className="outcome-card held-card"
+                tabIndex={-1}
+                aria-labelledby="held-title"
+              >
+                <span className="outcome-icon" aria-hidden="true">
+                  II
+                </span>
+                <div>
+                  <span>DRAFT HELD</span>
+                  <h2 id="held-title">{formatRemaining(remainingSeconds)} remaining.</h2>
+                  <p>Your words are still yours. This app did not save or post them.</p>
+                  <button type="button" onClick={editInOwnWords}>
+                    Return to the draft now
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {phase === "sent" ? (
+              <div
+                ref={outcomeRef}
+                className="outcome-card sent-card"
+                role="status"
+                tabIndex={-1}
+                aria-labelledby="sent-title"
+              >
+                <span className="outcome-icon" aria-hidden="true">
+                  ↗
+                </span>
+                <div>
+                  <span>YOUR CHOICE REMAINS YOURS</span>
+                  <h2 id="sent-title">Your final words stay yours.</h2>
+                  <p>
+                    This prototype does not connect to a real social account, so
+                    nothing was posted.
+                  </p>
+                  <button type="button" onClick={reset}>
+                    Reset the demo
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
-          <article className="post-card">
-            <div className="avatar" aria-hidden="true">
-              M
-            </div>
-            <div className="post-body">
-              <div className="post-meta">
-                <strong>Mara Chen</strong>
-                <span>@marach · 2m</span>
-              </div>
-              <p>{samplePost}</p>
-              <div className="post-actions" aria-label="Post engagement">
-                <span>◌ 18</span>
-                <span>↗ 7</span>
-                <span>♡ 63</span>
-              </div>
-            </div>
-          </article>
+          <aside
+            ref={panelRef}
+            className={`selah-panel ${phase === "pause" ? "is-open" : ""}`}
+            tabIndex={-1}
+            aria-live="polite"
+            aria-label="Selah reflection panel"
+          >
+            {phase !== "pause" || !result ? (
+              <>
+                <div className="panel-index">AT THIS THRESHOLD</div>
+                <h2>A pause, not a ghostwriter.</h2>
+                <p className="panel-lede">
+                  Selah lets the tension be seen without letting technology take
+                  over the conversation.
+                </p>
+                <div className="principles">
+                  <div>
+                    <span>LISTEN</span>
+                    <p>Read the heat and the need beneath the draft.</p>
+                  </div>
+                  <div>
+                    <span>RETRIEVE</span>
+                    <p>Bring in exact Scripture from YouVersion—never invented text.</p>
+                  </div>
+                  <div>
+                    <span>RETURN</span>
+                    <p>Give the question and the final words back to you.</p>
+                  </div>
+                </div>
+                <div className="api-line">
+                  <span>Grounded through</span>
+                  <strong>YouVersion Platform</strong>
+                  <i aria-hidden="true">×</i>
+                  <strong>Gloo AI Studio</strong>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="panel-topline">
+                  <span>
+                    {result.source === "live"
+                      ? "LIVE API PATH"
+                      : "CURATED OFFLINE PREVIEW"}
+                  </span>
+                  <button type="button" onClick={closePause}>
+                    Close
+                  </button>
+                </div>
 
-          {composerOpen ? (
-            <form className="reply-composer" onSubmit={pauseBeforeSend}>
-              <div className="avatar is-you" aria-hidden="true">
-                Y
-              </div>
-              <div className="composer-body">
-                <label htmlFor="reply">Reply to Mara</label>
-                <textarea
-                  id="reply"
-                  value={draft}
-                  rows={5}
-                  maxLength={500}
-                  onChange={(event) => setDraft(event.target.value)}
-                  disabled={phase === "loading"}
-                />
+                <div className="assessment">
+                  <div>
+                    <span>CONVERSATION TEMPERATURE</span>
+                    <strong>{result.assessment.temperature}</strong>
+                  </div>
+                  <div>
+                    <span>WHAT THE DRAFT IS PROTECTING</span>
+                    <strong>{result.assessment.underlyingNeed}</strong>
+                  </div>
+                </div>
 
-                {phase === "editing" && result ? (
-                  <div className="edit-coach" role="note">
-                    <span>KEEP IT YOURS</span>
-                    <p>{result.reflection.editPrompt}</p>
-                    <ol>
-                      {result.reflection.threeMoves.map((move) => (
-                        <li key={move}>{move}</li>
-                      ))}
-                    </ol>
+                <blockquote>
+                  <p>“{result.passage.content}”</p>
+                  <footer>
+                    <cite>{result.passage.reference}</cite>
+                    <span>{result.passage.version}</span>
+                  </footer>
+                </blockquote>
+
+                <button
+                  className="context-toggle"
+                  type="button"
+                  onClick={() => setShowContext((value) => !value)}
+                  aria-expanded={showContext}
+                  aria-controls="passage-context"
+                >
+                  {showContext ? "Hide passage context" : "Read passage context"}
+                  <span aria-hidden="true">{showContext ? "−" : "+"}</span>
+                </button>
+
+                {showContext ? (
+                  <div className="passage-context" id="passage-context">
+                    <span>{result.passage.contextReference}</span>
+                    <p>{result.passage.context}</p>
                   </div>
                 ) : null}
 
-                <p className="processing-note">
-                  In live mode, pausing sends this post and draft to Gloo AI
-                  Studio for processing under its{" "}
-                  <a
-                    href="https://gloo.com/legal/ai-studio-supplemental-terms-of-service"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    provider terms
-                  </a>
-                  . Without live credentials, only the supplied sample can
-                  replay the labeled preview; edited drafts receive no
-                  reflection. Selah never posts to the social network.
-                </p>
+                <div className="private-question">
+                  <span>A PRIVATE QUESTION</span>
+                  <h2>{result.reflection.question}</h2>
+                </div>
 
-                <div className="composer-actions">
-                  <span>{draft.length}/500</span>
-                  <button
-                    className="quiet-button"
-                    type="button"
-                    onClick={sendAnyway}
-                    disabled={phase === "loading"}
-                  >
-                    {safetyStopped ? "Send without Selah" : "Send without pause"}
+                <div className="decision-buttons">
+                  <button className="primary-button" type="button" onClick={editInOwnWords}>
+                    <span>Edit in my own words</span>
+                    <span aria-hidden="true">↙</span>
                   </button>
-                  <button
-                    className="primary-button"
-                    type="submit"
-                    disabled={phase === "loading"}
-                  >
-                    <span>
-                      {phase === "loading"
-                        ? "Opening Selah"
-                        : safetyStopped
-                          ? "Recheck this draft"
-                          : "Pause before sending"}
-                    </span>
-                    <span aria-hidden="true">{phase === "loading" ? "•••" : "||"}</span>
+                  <button type="button" onClick={holdDraft}>
+                    Pause 10 minutes
+                  </button>
+                  <button type="button" onClick={sendAnyway}>
+                    Send anyway
                   </button>
                 </div>
-                {error ? (
-                  <div className="form-error" role="alert">
-                    <p>{error}</p>
-                    {supportUrl ? (
-                      <a href={supportUrl} target="_blank" rel="noreferrer">
-                        Find a verified helpline in your country
-                      </a>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </form>
-          ) : null}
-
-          {phase === "held" ? (
-            <div className="outcome-card held-card" role="status">
-              <span className="outcome-icon" aria-hidden="true">
-                ||
-              </span>
-              <div>
-                <span>DRAFT HELD</span>
-                <h2>{formatRemaining(remainingSeconds)} remaining.</h2>
-                <p>Your words are still yours. This app did not save or post them.</p>
-                <button type="button" onClick={editInOwnWords}>
-                  Return to the draft now
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {phase === "sent" ? (
-            <div className="outcome-card sent-card" role="status">
-              <span className="outcome-icon" aria-hidden="true">
-                ↗
-              </span>
-              <div>
-                <span>YOUR CHOICE REMAINS YOURS</span>
-                <h2>Your final words stay yours.</h2>
-                <p>
-                  This prototype does not connect to a real social account, so
-                  nothing was posted.
-                </p>
-                <button type="button" onClick={reset}>
-                  Reset the demo
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <aside
-          ref={panelRef}
-          className={`selah-panel ${phase === "pause" ? "is-open" : ""}`}
-          tabIndex={-1}
-          aria-live="polite"
-        >
-          {phase !== "pause" || !result ? (
-            <>
-              <div className="panel-index">WHY THIS MOMENT</div>
-              <h2>Scripture as conversation, not broadcast.</h2>
-              <p className="panel-lede">
-                The most consequential digital moments are often measured in
-                seconds. Selah brings Scripture into that threshold—privately,
-                without hijacking the user’s voice.
-              </p>
-              <div className="principles">
-                <div>
-                  <span>01</span>
-                  <p>
-                    Displayed Bible text comes only from YouVersion or the pinned
-                    exact preview fixture.
-                  </p>
-                </div>
-                <div>
-                  <span>02</span>
-                  <p>Never auto-post Scripture into someone else’s feed.</p>
-                </div>
-                <div>
-                  <span>03</span>
-                  <p>Always leave the final words and decision with you.</p>
-                </div>
-              </div>
-              <div className="api-line">
-                <span>Powered by</span>
-                <strong>YouVersion Platform</strong>
-                <i>+</i>
-                <strong>Gloo AI Studio</strong>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="panel-topline">
-                <span>
-                  {result.source === "live"
-                    ? "LIVE API PATH"
-                    : "CURATED OFFLINE PREVIEW"}
-                </span>
-                <button type="button" onClick={() => setPhase("compose")}>
-                  Close
-                </button>
-              </div>
-
-              <div className="assessment">
-                <div>
-                  <span>CONVERSATION TEMPERATURE</span>
-                  <strong>{result.assessment.temperature}</strong>
-                </div>
-                <div>
-                  <span>WHAT THE DRAFT IS PROTECTING</span>
-                  <strong>{result.assessment.underlyingNeed}</strong>
-                </div>
-              </div>
-
-              <blockquote>
-                <p>“{result.passage.content}”</p>
-                <footer>
-                  <cite>{result.passage.reference}</cite>
-                  <span>{result.passage.version}</span>
-                </footer>
-              </blockquote>
-
-              <button
-                className="context-toggle"
-                type="button"
-                onClick={() => setShowContext((value) => !value)}
-                aria-expanded={showContext}
-                aria-controls="passage-context"
-              >
-                {showContext ? "Hide passage context" : "Read passage context"}
-                <span aria-hidden="true">{showContext ? "−" : "+"}</span>
-              </button>
-
-              {showContext ? (
-                <div className="passage-context" id="passage-context">
-                  <span>{result.passage.contextReference}</span>
-                  <p>{result.passage.context}</p>
-                </div>
-              ) : null}
-
-              <div className="private-question">
-                <span>A PRIVATE QUESTION</span>
-                <h2>{result.reflection.question}</h2>
-              </div>
-
-              <div className="decision-buttons">
-                <button className="primary-button" type="button" onClick={editInOwnWords}>
-                  <span>Edit in my own words</span>
-                  <span aria-hidden="true">↙</span>
-                </button>
-                <button type="button" onClick={holdDraft}>
-                  Pause 10 minutes
-                </button>
-                <button type="button" onClick={sendAnyway}>
-                  Send anyway
-                </button>
-              </div>
-              <p className="copyright">{result.passage.copyright}</p>
-            </>
-          )}
-        </aside>
+                <p className="copyright">{result.passage.copyright}</p>
+              </>
+            )}
+          </aside>
+        </section>
       </section>
 
-      <section className="architecture-strip" aria-label="How Selah works">
-        <span>THE PROVENANCE CHAIN</span>
-        <div>
+      <section className="architecture-strip" aria-labelledby="provenance-title">
+        <div className="architecture-heading">
+          <span>THE PROVENANCE CHAIN</span>
+          <h2 id="provenance-title">
+            Three bounded stages. One verified text. <em>Zero ghostwriting.</em>
+          </h2>
+        </div>
+        <div className="architecture-steps">
           <article>
-            <b>01</b>
-            <h3>Read the temperature</h3>
+            <b>01 / READ</b>
+            <h3>Notice what is happening</h3>
             <p>
               Gloo classifies tension, underlying need, and a bounded semantic
               risk signal. Any risk stops the reflection path.
             </p>
           </article>
           <article>
-            <b>02</b>
-            <h3>Retrieve, never invent</h3>
+            <b>02 / RETRIEVE</b>
+            <h3>Use the text as written</h3>
             <p>YouVersion returns the exact passage, context, version, and attribution.</p>
           </article>
           <article>
-            <b>03</b>
-            <h3>Reflect, never replace</h3>
+            <b>03 / REFLECT</b>
+            <h3>Return choice to the person</h3>
             <p>
-              Gloo is instructed to ground one private question in that text. No
-              model text is inserted into the reply.
+              Gloo grounds one private question in that text. No model text is
+              inserted into the reply.
             </p>
           </article>
         </div>
@@ -465,7 +530,7 @@ export function Experience() {
       <footer className="site-footer">
         <p>
           An opt-in interaction prototype for <strong>Scripture in New Frontiers</strong>.
-          No account. Selah does not persist drafts or post messages.
+          No account. No draft storage. No automatic posting.
         </p>
         <span>SELAH / 2026</span>
       </footer>
