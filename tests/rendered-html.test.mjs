@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import test from "node:test";
 
 const SAMPLE_POST =
-  "If this mattered to you, you would have shown up. Stop calling it complicated.";
+  "I’m tired of you pretending this isn’t a choice. Stop calling it complicated.";
 const SAMPLE_DRAFT =
   "You don’t get to decide what mattered to me. You have no idea what I was carrying—maybe stop making everything about you.";
 
@@ -88,7 +88,7 @@ test("server-renders the Selah experience", async () => {
   assert.match(html, /Mara wrote/);
   assert.match(
     html,
-    /If this mattered to you, you would have shown up\. Stop calling it complicated\./,
+    /I’m tired of you pretending this isn’t a choice\. Stop calling it complicated\./,
   );
   assert.match(html, /Pause before sending/);
   assert.match(html, /YouVersion Platform/);

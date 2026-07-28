@@ -36,27 +36,25 @@ class Beat:
 # measured proof and safety, then a slower close.
 BEATS = (
     Beat(
-        rate="-4%",
-        silence_after=0.72,
+        rate="+1%",
+        silence_after=0.34,
         spoken=(
-            "Hi. This is Say-lah Before Send—a private pause before a message leaves your hands.",
-            "Here is the moment it was built for.",
+            "Hi.",
+            "Mara writes, “I’m tired of you pretending this isn’t a choice. Stop calling it complicated.”",
         ),
         displayed=(
-            "Hi. This is Selah Before Send—a private pause before a message leaves your hands.",
-            "Here is the moment it was built for.",
+            "Hi.",
+            "Mara writes, “I’m tired of you pretending this isn’t a choice. Stop calling it complicated.”",
         ),
     ),
     Beat(
         rate="+3%",
-        silence_after=0.50,
+        silence_after=0.38,
         spoken=(
-            "A friend writes, “If this mattered to you, you would have shown up.”",
             "You fire back, “You have no idea what I was carrying.”",
             "Your cursor reaches Send.",
         ),
         displayed=(
-            "A friend writes, “If this mattered to you, you would have shown up.”",
             "You fire back, “You have no idea what I was carrying.”",
             "Your cursor reaches Send.",
         ),
@@ -71,6 +69,7 @@ BEATS = (
         rate="+1%",
         silence_after=0.58,
         spoken=(
+            "This is Say-lah Before Send—a private pause before that reply leaves your hands.",
             "First, Glue reads the heat—not who is right.",
             "Here it sees defensiveness, and a need to be understood.",
             "That selects a pre-approved theme.",
@@ -78,6 +77,7 @@ BEATS = (
             "The model never chooses or invents Scripture.",
         ),
         displayed=(
+            "This is Selah Before Send—a private pause before that reply leaves your hands.",
             "First, Gloo reads the heat—not who is right.",
             "Here it sees defensiveness, and a need to be understood.",
             "That selects a pre-approved theme.",
@@ -409,7 +409,7 @@ def main() -> None:
         "duration_seconds": round(output_duration, 3),
         "integrated_lufs": loudness["integrated_lufs"],
         "true_peak_dbfs": loudness["true_peak_dbfs"],
-        "thought_groups": 8,
+        "thought_groups": len(BEATS),
         "synthesis_segments": len(BEATS),
         "rates": [beat.rate for beat in BEATS],
         "intentional_silence_seconds": round(

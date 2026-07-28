@@ -18,7 +18,7 @@ const previewStillPath =
   "/private/tmp/selah-demo-current.jpg";
 const totalDuration =
   profile === "v4"
-    ? 87.198
+    ? 86.458
     : profile === "v3"
       ? 82.608
       : profile === "human"
@@ -83,10 +83,10 @@ function fallbackProductStill() {
       <text x="620" y="170" fill="#777871" font-family="${sans}" font-size="18"
         font-weight="700" letter-spacing="1.4">CONVERSATION</text>
       <text x="620" y="250" fill="${black}" font-family="${serif}" font-size="48">
-        If this mattered to you,
+        I’m tired of you pretending
       </text>
       <text x="620" y="310" fill="${black}" font-family="${serif}" font-size="48">
-        you would have shown up.
+        this isn’t a choice.
       </text>
       <text x="620" y="370" fill="${black}" font-family="${serif}" font-size="48">
         Stop calling it complicated.
@@ -337,9 +337,9 @@ function openingConversationFrame(stage) {
     <rect x="112" y="210" width="1696" height="286" rx="2" fill="${black}"/>
     <rect x="112" y="210" width="8" height="286" fill="${acid}"/>
     <text x="170" y="302" fill="${paper}" font-family="${serif}" font-size="56"
-      font-weight="400" letter-spacing="-1.1">“If this mattered to you,</text>
+      font-weight="400" letter-spacing="-1.1">“I’m tired of you pretending</text>
     <text x="170" y="374" fill="${paper}" font-family="${serif}" font-size="56"
-      font-weight="400" letter-spacing="-1.1">you would have shown up.</text>
+      font-weight="400" letter-spacing="-1.1">this isn’t a choice.</text>
     <text x="170" y="446" fill="${paper}" font-family="${serif}" font-size="56"
       font-weight="400" letter-spacing="-1.1">Stop calling it complicated.”</text>
 
@@ -442,13 +442,13 @@ const placeholders = [
 const profileRanges =
   profile === "v4"
     ? [
-        [0, 18.936],
-        [18.936, 21.532],
-        [21.532, 37.664],
-        [37.664, 52.116],
-        [52.116, 67.19],
-        [67.19, 78.754],
-        [78.754, 81.859],
+        [0, 12.436],
+        [12.436, 15.032],
+        [15.032, 36.564],
+        [36.564, 51.016],
+        [51.016, 66.45],
+        [66.45, 78.014],
+        [78.014, 81.119],
       ]
     : profile === "v3"
     ? [

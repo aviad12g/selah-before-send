@@ -369,7 +369,7 @@ print(risk_results)"""
     ),
     new_code_cell(
         """PINNED_POST = (
-    "If this mattered to you, you would have shown up. "
+    "I’m tired of you pretending this isn’t a choice. "
     "Stop calling it complicated."
 )
 PINNED_DRAFT = (

@@ -2,8 +2,8 @@
 
 This is a truth-gated 1080p renderer for the replacement Kaggle pitch video.
 It uses the final paced narration in `../video-voiceover-v4-human.mp3`, the
-editorial conversation cover, eight restrained burned-in proof lines, and seven short
-real-product recording slots.
+editorial conversation cover, seven restrained burned-in proof lines, and
+seven short real-product recording slots.
 
 ## Visual direction
 
@@ -63,7 +63,7 @@ The paced v4 human track is the default:
 
 The renderer uses `video-voiceover-v4-human.srt` as the timing authority for
 the spoken “Hi,” friend-message scenario, seven slots, editorial section
-marks, proof overlays, and cover. The paced cut runs 87.20 seconds. Older v3,
+marks, proof overlays, and cover. The paced cut runs 86.46 seconds. Older v3,
 v2 neural, and standard profiles remain available through `AUDIO_FILE`;
 arbitrary narration is not silently forced into the edit.
 

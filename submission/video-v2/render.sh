@@ -62,9 +62,9 @@ clip_names=(
 )
 if [[ "${PROFILE}" == "v4" ]]; then
   # Timed directly from video-voiceover-v4-human.srt. The final cover begins
-  # with the last spoken thought at 81.860 seconds.
-  durations=(18.936 2.596 16.132 14.452 15.074 11.564 3.105)
-  PRODUCT_DURATION=81.859
+  # with the last spoken thought at 81.120 seconds.
+  durations=(12.436 2.596 21.532 14.452 15.434 11.564 3.105)
+  PRODUCT_DURATION=81.119
 elif [[ "${PROFILE}" == "v3" ]]; then
   # Timed directly from the normalized video-voiceover-v3-human.srt.
   durations=(16.104 3.190 16.289 14.011 12.929 11.641 3.021)
@@ -190,33 +190,32 @@ if [[ "${PROFILE}" == "v4" ]]; then
   # Start on the actual dilemma. The spoken “Hi” plays over Mara's complete
   # message instead of delaying the hook with a separate greeting card.
   if [[ "${MODE}" == "preview" ]]; then
-    add_overlay "${ASSETS}/opening-message.png" 0.00 13.366
-    add_overlay "${ASSETS}/opening-reply.png" 13.366 18.936
-    add_overlay "${ASSETS}/opening-pause.png" 18.936 21.532
+    add_overlay "${ASSETS}/opening-message.png" 0.00 6.920
+    add_overlay "${ASSETS}/opening-reply.png" 6.920 12.436
+    add_overlay "${ASSETS}/opening-pause.png" 12.436 15.032
   fi
 
   # No chapter banner here: the conversation itself already provides the
   # section context, and a banner would compete with the product header.
-  add_overlay "${ASSETS}/chapter-02.png" 21.532 37.40
-  add_overlay "${ASSETS}/chapter-03.png" 37.664 51.20
-  add_overlay "${ASSETS}/chapter-04.png" 52.116 66.60
-  add_overlay "${ASSETS}/chapter-05.png" 67.190 78.40
+  add_overlay "${ASSETS}/chapter-02.png" 15.032 35.92
+  add_overlay "${ASSETS}/chapter-03.png" 36.564 50.30
+  add_overlay "${ASSETS}/chapter-04.png" 51.016 65.70
+  add_overlay "${ASSETS}/chapter-05.png" 66.450 77.70
 
   # Only decision and proof lines are burned in. The full v4 SRT remains the
   # accessibility track and the canonical timing reference.
-  add_overlay "${ASSETS}/caption-01.png" 18.936 20.227
-  add_overlay "${ASSETS}/caption-02.png" 21.532 24.725
-  add_overlay "${ASSETS}/caption-03.png" 30.046 34.180
-  add_overlay "${ASSETS}/caption-04.png" 34.180 37.014
-  add_overlay "${ASSETS}/caption-05.png" 43.927 51.389
-  add_overlay "${ASSETS}/caption-06.png" 52.116 58.368
-  add_overlay "${ASSETS}/caption-07.png" 58.368 66.323
-  add_overlay "${ASSETS}/caption-08.png" 81.860 87.198
+  add_overlay "${ASSETS}/caption-01.png" 12.436 13.727
+  add_overlay "${ASSETS}/caption-02.png" 20.490 23.583
+  add_overlay "${ASSETS}/caption-03.png" 28.954 33.088
+  add_overlay "${ASSETS}/caption-04.png" 33.088 35.922
+  add_overlay "${ASSETS}/caption-05.png" 42.827 50.289
+  add_overlay "${ASSETS}/caption-06.png" 51.016 56.897
+  add_overlay "${ASSETS}/caption-07.png" 59.594 65.583
 
-  add_overlay "${ASSETS}/architecture.png" 67.190 78.754
+  add_overlay "${ASSETS}/architecture.png" 66.450 78.014
   if [[ "${MODE}" == "final" ]]; then
-    add_overlay "${ASSETS}/proof-live.png" 30.046 34.180
-    add_overlay "${ASSETS}/proof-safety.png" 60.334 63.612
+    add_overlay "${ASSETS}/proof-live.png" 28.954 33.088
+    add_overlay "${ASSETS}/proof-safety.png" 59.594 62.872
   fi
 elif [[ "${PROFILE}" == "v3" ]]; then
   # Editorial v4: a human hello, a short title card, then product-first proof.
